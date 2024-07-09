@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Font Preview</title>
+    <style>
+        @font-face {
+            font-family: 'CustomFont';
+            src: url('path/to/your/font.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            width: 300px;
+        }
+        .card-title {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .preview {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+            padding: 10px;
+            font-family: 'CustomFont', sans-serif;
+            font-size: 24px;
+            line-height: 1.5;
+        }
+        #fontUpload {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 class="card-title">Custom Font Preview</h2>
+        <div class="input-group">
+            <label for="fontUpload">Upload TTF Font:</label>
+            <input type="file" id="fontUpload" accept=".ttf">
+        </div>
+        <div class="input-group">
+            <label for="textInput">Enter your text:</label>
+            <input type="text" id="textInput" placeholder="Type here...">
+        </div>
+        <div class="input-group">
+            <label>Preview:</label>
+            <div id="preview" class="preview"></div>
+        </div>
+    </div>
+
+    <script>
+        const fontUpload = document.getElementById('fontUpload');
+        const textInput = document.getElementById('textInput');
+        const preview = document.getElementById('preview');
+
+        fontUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fontFace = new FontFace('CustomFont', e.target.result);
+                    fontFace.load().then(function(loadedFace) {
+                        document.fonts.add(loadedFace);
+                        preview.style.fontFamily = 'CustomFont, sans-serif';
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        textInput.addEventListener('input', function() {
+            preview.textContent = this.value;
+        });
+    </script>
+</body>
+</html>
