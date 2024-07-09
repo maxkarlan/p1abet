@@ -7,7 +7,7 @@
     <style>
         @font-face {
             font-family: 'CustomFont';
-            src: url('path/to/your/font.ttf') format('truetype');
+            src: url('p1a.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
@@ -63,10 +63,6 @@
     <div class="card">
         <h2 class="card-title">Custom Font Preview</h2>
         <div class="input-group">
-            <label for="fontUpload">Upload TTF Font:</label>
-            <input type="file" id="fontUpload" accept=".ttf">
-        </div>
-        <div class="input-group">
             <label for="textInput">Enter your text:</label>
             <input type="text" id="textInput" placeholder="Type here...">
         </div>
@@ -74,26 +70,50 @@
             <label>Preview:</label>
             <div id="preview" class="preview"></div>
         </div>
+        <div id="fontStatus"></div>
     </div>
 
     <script>
-        const fontUpload = document.getElementById('fontUpload');
+
+        function loadCustomFont() {
+            const font = new FontFace('CustomFont', 'url(p1a.ttf)');
+            const preview = document.getElementById('preview');
+            const fontStatus = document.getElementById('fontStatus');
+
+            font.load().then(function(loadedFont) {
+                document.fonts.add(loadedFont);
+                preview.style.fontFamily = 'CustomFont, sans-serif';
+                // fontStatus.textContent = 'Custom font loaded successfully!';
+            }).catch(function(error) {
+                console.error('Error loading font:', error);
+                fontStatus.textContent = 'Failed to load custom font. Using default font.';
+                preview.style.fontFamily = 'sans-serif';
+            });
+        }
+
         const textInput = document.getElementById('textInput');
         const preview = document.getElementById('preview');
 
+        textInput.addEventListener('input', function() {
+            preview.textContent = this.value;
+        });
+
+        // Load the custom font when the page loads
+        window.addEventListener('DOMContentLoaded', loadCustomFont);
+
         fontUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const fontFace = new FontFace('CustomFont', e.target.result);
-                    fontFace.load().then(function(loadedFace) {
-                        document.fonts.add(loadedFace);
-                        preview.style.fontFamily = 'CustomFont, sans-serif';
-                    });
-                };
-                reader.readAsArrayBuffer(file);
-            }
+            // const file = e.target.files[0];
+            // if (file) {
+            //     const reader = new FileReader();
+            //     reader.onload = function(e) {
+            //         const fontFace = new FontFace('CustomFont', e.target.result);
+            //         fontFace.load().then(function(loadedFace) {
+            //             document.fonts.add(loadedFace);
+            //             preview.style.fontFamily = 'CustomFont, sans-serif';
+            //         });
+            //     };
+            //     reader.readAsArrayBuffer(file);
+            // }
         });
 
         textInput.addEventListener('input', function() {
