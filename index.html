@@ -21,12 +21,18 @@
             margin: 0;
             background-color: #f0f0f0;
         }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
         .card {
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 20px;
-            width: 300px;
+            flex: 1;
         }
         .card-title {
             font-size: 1.5em;
@@ -44,6 +50,7 @@
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            box-sizing: border-box;
         }
         .preview {
             border: 1px solid #ddd;
@@ -53,28 +60,74 @@
             font-family: 'CustomFont', sans-serif;
             font-size: 24px;
             line-height: 1.5;
+            box-sizing: border-box;
         }
         #fontUpload {
             margin-bottom: 15px;
         }
+        .settings-menu {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
+            width: 200px;
+        }
+        .settings-menu h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .align-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .align-button {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+        .align-button.active {
+            background-color: #ddd;
+        }
+        #colorWheel {
+            margin-top: 10px;
+            cursor: crosshair;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2 class="card-title">Custom Font Preview</h2>
-        <div class="input-group">
-            <label for="textInput">Enter your text:</label>
-            <input type="text" id="textInput" placeholder="Type here...">
+    <div class="container">
+        <div class="card" id="previewCard">
+            <h2 class="card-title">Custom Font Preview</h2>
+            <div class="input-group">
+                <label for="textInput">Enter your text:</label>
+                <input type="text" id="textInput" placeholder="Type here...">
+            </div>
+            <div class="input-group">
+                <label>Preview:</label>
+                <div id="preview" class="preview"></div>
+            </div>
+            <div id="fontStatus"></div>
         </div>
-        <div class="input-group">
-            <label>Preview:</label>
-            <div id="preview" class="preview"></div>
+        
+        <div class="settings-menu" id="settingsMenu">
+            <h3>Settings</h3>
+            <h4>Text Alignment</h4>
+            <div class="align-buttons">
+                <button class="align-button active" data-align="left">Left</button>
+                <button class="align-button" data-align="center">Center</button>
+                <button class="align-button" data-align="right">Right</button>
+            </div>
+            <h4>Background Color</h4>
+            <canvas id="colorWheel" width="150" height="150"></canvas>
         </div>
-        <div id="fontStatus"></div>
     </div>
 
     <script>
-
         function loadCustomFont() {
             const font = new FontFace('CustomFont', 'url(p1a.ttf)');
             const preview = document.getElementById('preview');
@@ -83,7 +136,6 @@
             font.load().then(function(loadedFont) {
                 document.fonts.add(loadedFont);
                 preview.style.fontFamily = 'CustomFont, sans-serif';
-                // fontStatus.textContent = 'Custom font loaded successfully!';
             }).catch(function(error) {
                 console.error('Error loading font:', error);
                 fontStatus.textContent = 'Failed to load custom font. Using default font.';
@@ -93,32 +145,60 @@
 
         const textInput = document.getElementById('textInput');
         const preview = document.getElementById('preview');
+        const alignButtons = document.querySelectorAll('.align-button');
+        const previewCard = document.getElementById('previewCard');
+        const colorWheel = document.getElementById('colorWheel');
+        const ctx = colorWheel.getContext('2d');
 
         textInput.addEventListener('input', function() {
             preview.textContent = this.value;
+        });
+
+        alignButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                alignButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                preview.style.textAlign = this.getAttribute('data-align');
+            });
+        });
+
+        // Color wheel
+        function drawColorWheel() {
+            const centerX = colorWheel.width / 2;
+            const centerY = colorWheel.height / 2;
+            const radius = Math.min(centerX, centerY);
+
+            for (let angle = 0; angle < 360; angle++) {
+                const startAngle = (angle - 2) * Math.PI / 180;
+                const endAngle = (angle + 2) * Math.PI / 180;
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+
+                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                gradient.addColorStop(0, 'hsl(' + angle + ', 100%, 100%)');
+                gradient.addColorStop(1, 'hsl(' + angle + ', 100%, 50%)');
+
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+        }
+
+        drawColorWheel();
+
+        colorWheel.addEventListener('click', function(event) {
+            const rect = colorWheel.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const imageData = ctx.getImageData(x, y, 1, 1);
+            const color = `rgb(${imageData.data[0]}, ${imageData.data[1]}, ${imageData.data[2]})`;
+            previewCard.style.backgroundColor = color;
         });
 
         // Load the custom font when the page loads
         window.addEventListener('DOMContentLoaded', loadCustomFont);
-
-        fontUpload.addEventListener('change', function(e) {
-            // const file = e.target.files[0];
-            // if (file) {
-            //     const reader = new FileReader();
-            //     reader.onload = function(e) {
-            //         const fontFace = new FontFace('CustomFont', e.target.result);
-            //         fontFace.load().then(function(loadedFace) {
-            //             document.fonts.add(loadedFace);
-            //             preview.style.fontFamily = 'CustomFont, sans-serif';
-            //         });
-            //     };
-            //     reader.readAsArrayBuffer(file);
-            // }
-        });
-
-        textInput.addEventListener('input', function() {
-            preview.textContent = this.value;
-        });
     </script>
 </body>
 </html>
