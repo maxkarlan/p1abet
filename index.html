@@ -23,23 +23,17 @@
             display: flex;
             height: 100%;
         }
-        .input-column {
+        .input-column, .settings-column {
             width: 20%;
             padding: 20px;
             background-color: white;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
         }
         .preview-column {
             width: 60%;
             padding: 20px;
             display: flex;
             flex-direction: column;
-        }
-        .settings-column {
-            width: 20%;
-            padding: 20px;
-            background-color: white;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
         }
         .card-title {
             font-size: 1.5em;
@@ -73,13 +67,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
         #previewText {
-            white-space: pre-wrap;
-            word-break: break-word;
-            hyphens: auto;
             max-width: 100%;
-            width: 100%;
+            max-height: 100%;
         }
         .align-grid {
             display: grid;
@@ -106,6 +98,23 @@
             margin-left: auto;
             margin-right: auto;
         }
+        .shape-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .shape-button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            flex-grow: 1;
+            text-align: center;
+            margin: 0 5px;
+        }
+        .shape-button.active {
+            background-color: #ddd;
+        }
     </style>
 </head>
 <body>
@@ -128,6 +137,12 @@
 
         <div class="settings-column">
             <h2 class="card-title">Settings</h2>
+            <h3>Text Shape</h3>
+            <div class="shape-buttons">
+                <button class="shape-button active" data-shape="rectangle">Rectangle</button>
+                <button class="shape-button" data-shape="circle">Circle</button>
+                <button class="shape-button" data-shape="spiral">Spiral</button>
+            </div>
             <h3>Text Alignment</h3>
             <div class="align-grid">
                 <button class="align-button" data-h="left" data-v="flex-start">↖</button>
@@ -146,6 +161,8 @@
     </div>
 
     <script>
+        let currentShape = 'rectangle';
+
         function loadCustomFont() {
             const font = new FontFace('CustomFont', 'url(p1a.ttf)');
             const preview = document.getElementById('preview');
@@ -154,12 +171,12 @@
             font.load().then(function(loadedFont) {
                 document.fonts.add(loadedFont);
                 preview.style.fontFamily = 'CustomFont, sans-serif';
-                adjustFontSize();
+                updatePreviewText();
             }).catch(function(error) {
                 console.error('Error loading font:', error);
                 fontStatus.textContent = 'Failed to load custom font. Using default font.';
                 preview.style.fontFamily = 'sans-serif';
-                adjustFontSize();
+                updatePreviewText();
             });
         }
 
@@ -167,24 +184,137 @@
         const preview = document.getElementById('preview');
         const previewText = document.getElementById('previewText');
         const alignButtons = document.querySelectorAll('.align-button');
+        const shapeButtons = document.querySelectorAll('.shape-button');
         const colorWheel = document.getElementById('colorWheel');
         const ctx = colorWheel.getContext('2d');
+
+        function createCircleText(text) {
+            const chars = text.split('');
+            const radius = Math.min(preview.clientWidth, preview.clientHeight) / 2 * 0.8;
+            
+            return chars.map((char, i) => {
+                const angle = (i / chars.length) * 2 * Math.PI - Math.PI / 2; // Start from the top
+                const x = radius * Math.cos(angle);
+                const y = radius * Math.sin(angle);
+                return `<span style="position: absolute; left: 50%; top: 50%; transform: translate(${x}px, ${y}px) rotate(${angle + Math.PI/2}rad)">${char}</span>`;
+            }).join('');
+        }
+
+        function createSpiralText(text) {
+            const chars = text.split('');
+            const maxRadius = Math.min(preview.clientWidth, preview.clientHeight) / 2 * 0.9;
+            
+            return chars.map((char, i) => {
+                const angle = i * 0.5;
+                const radius = (i / chars.length) * maxRadius;
+                const x = radius * Math.cos(angle);
+                const y = radius * Math.sin(angle);
+                return `<span style="position: absolute; left: 50%; top: 50%; transform: translate(${x}px, ${y}px) rotate(${angle + Math.PI/2}rad)">${char}</span>`;
+            }).join('');
+        }
+
+        function updatePreviewText() {
+            const text = textInput.value;
+            
+            // Reset styles
+            preview.style = '';
+            previewText.style = '';
+            
+            switch(currentShape) {
+                case 'rectangle':
+                    previewText.style.position = 'static';
+                    previewText.innerHTML = text;
+                    applyRectangleAlignment();
+                    break;
+                case 'circle':
+                case 'spiral':
+                    previewText.style.position = 'relative';
+                    previewText.style.width = '100%';
+                    previewText.style.height = '100%';
+                    previewText.innerHTML = currentShape === 'circle' ? createCircleText(text) : createSpiralText(text);
+                    break;
+            }
+            adjustFontSize();
+        }
+
+        function applyRectangleAlignment() {
+            preview.style.display = 'flex';
+            preview.style.justifyContent = currentHAlign;
+            preview.style.alignItems = currentVAlign;
+            previewText.style.textAlign = currentHAlign;
+            previewText.style.width = '100%';
+        }
 
         function adjustFontSize() {
             const previewWidth = preview.clientWidth;
             const previewHeight = preview.clientHeight;
-            let fontSize = 100;
-            previewText.style.fontSize = fontSize + 'px';
             
-            while ((previewText.scrollWidth > previewWidth || previewText.scrollHeight > previewHeight) && fontSize > 10) {
-                fontSize--;
+            if (currentShape === 'rectangle') {
+                let fontSize = Math.min(previewWidth, previewHeight) / 10; // Start with a reasonable size
                 previewText.style.fontSize = fontSize + 'px';
-            }
-        }
+                
+                while ((previewText.scrollWidth > previewWidth || previewText.scrollHeight > previewHeight) && fontSize > 10) {
+                    fontSize *= 0.9;
+                    previewText.style.fontSize = fontSize + 'px';
+                }
 
-        function updatePreviewText() {
-            previewText.textContent = textInput.value;
-            adjustFontSize();
+                while (previewText.scrollWidth < previewWidth && previewText.scrollHeight < previewHeight && fontSize < 100) {
+                    fontSize *= 1.1;
+                    previewText.style.fontSize = fontSize + 'px';
+                    if (previewText.scrollWidth > previewWidth || previewText.scrollHeight > previewHeight) {
+                        fontSize /= 1.1;
+                        previewText.style.fontSize = fontSize + 'px';
+                        break;
+                    }
+                }
+            } else {
+                const chars = Array.from(previewText.children);
+                const charCount = chars.length;
+                
+                const sizeFactor = 0.8;  // Adjust this factor to control the initial size of the characters
+                let fontSize = Math.min(previewWidth, previewHeight) / Math.sqrt(charCount) * sizeFactor;
+                
+                chars.forEach(char => {
+                    char.style.fontSize = `${fontSize}px`;
+                });
+
+                let scale = 1;
+                let iterations = 0;
+                const maxIterations = 30;
+                
+                const checkOverlap = () => chars.some(char => {
+                    const rect = char.getBoundingClientRect();
+                    const margin = 5;
+                    return rect.left < margin || rect.top < margin || 
+                           rect.right > previewWidth - margin || rect.bottom > previewHeight - margin;
+                });
+
+                while (checkOverlap() && scale > 0.1 && iterations < maxIterations) {
+                    scale *= 0.95;
+                    fontSize *= 0.95;
+                    chars.forEach(char => {
+                        char.style.fontSize = `${fontSize}px`;
+                    });
+                    iterations++;
+                }
+
+                while (!checkOverlap() && iterations < maxIterations) {
+                    scale *= 1.05;
+                    fontSize *= 1.05;
+                    chars.forEach(char => {
+                        char.style.fontSize = `${fontSize}px`;
+                    });
+                    iterations++;
+                    if (checkOverlap()) {
+                        scale /= 1.05;
+                        fontSize /= 1.05;
+                        chars.forEach(char => {
+                            char.style.fontSize = `${fontSize}px`;
+                        });
+                        break;
+                    }
+                }
+            }
         }
 
         textInput.addEventListener('input', updatePreviewText);
@@ -193,15 +323,23 @@
             button.addEventListener('click', function() {
                 alignButtons.forEach(btn => btn.classList.remove('active'));
                 this.classList.add('active');
-                const hAlign = this.getAttribute('data-h');
-                const vAlign = this.getAttribute('data-v');
-                previewText.style.textAlign = hAlign;
-                preview.style.justifyContent = hAlign;
-                preview.style.alignItems = vAlign;
+                currentHAlign = this.getAttribute('data-h');
+                currentVAlign = this.getAttribute('data-v');
+                if (currentShape === 'rectangle') {
+                    applyRectangleAlignment();
+                }
             });
         });
 
-        // Color wheel
+        shapeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                shapeButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                currentShape = this.getAttribute('data-shape');
+                updatePreviewText();
+            });
+        });
+
         function drawColorWheel() {
             const centerX = colorWheel.width / 2;
             const centerY = colorWheel.height / 2;
@@ -236,13 +374,12 @@
             preview.style.backgroundColor = color;
         });
 
-        window.addEventListener('resize', adjustFontSize);
-
-        // Load the custom font when the page loads
         window.addEventListener('DOMContentLoaded', function() {
             loadCustomFont();
-            updatePreviewText();
+            updatePreviewText(); // This will now set the initial font size correctly
         });
+
+        window.addEventListener('resize', updatePreviewText); // Changed from adjustFontSize to updatePreviewText
     </script>
 </body>
 </html>
