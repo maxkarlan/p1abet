@@ -12,27 +12,34 @@
             font-style: normal;
         }
 
-        body {
+        body, html {
             font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
+            padding: 0;
+            height: 100%;
             background-color: #f0f0f0;
         }
         .container {
             display: flex;
-            gap: 20px;
-            max-width: 800px;
-            width: 100%;
+            height: 100%;
         }
-        .card {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .input-column {
+            width: 20%;
             padding: 20px;
-            flex: 1;
+            background-color: white;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .preview-column {
+            width: 60%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .settings-column {
+            width: 20%;
+            padding: 20px;
+            background-color: white;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
         }
         .card-title {
             font-size: 1.5em;
@@ -45,47 +52,49 @@
             display: block;
             margin-bottom: 5px;
         }
-        input {
+        textarea {
             width: 100%;
+            height: 200px;
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
             box-sizing: border-box;
+            resize: vertical;
         }
         .preview {
+            flex-grow: 1;
             border: 1px solid #ddd;
             border-radius: 4px;
-            min-height: 100px;
-            padding: 10px;
+            padding: 20px;
             font-family: 'CustomFont', sans-serif;
-            font-size: 24px;
-            line-height: 1.5;
             box-sizing: border-box;
-        }
-        #fontUpload {
-            margin-bottom: 15px;
-        }
-        .settings-menu {
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 15px;
-            width: 200px;
-        }
-        .settings-menu h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-        .align-buttons {
+            overflow: hidden;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
+            align-items: center;
+        }
+        #previewText {
+            white-space: pre-wrap;
+            word-break: break-word;
+            hyphens: auto;
+            max-width: 100%;
+            width: 100%;
+        }
+        .align-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
             margin-bottom: 15px;
         }
         .align-button {
-            padding: 5px 10px;
+            padding: 10px;
             border: 1px solid #ddd;
             background-color: #f0f0f0;
             cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .align-button.active {
             background-color: #ddd;
@@ -101,28 +110,37 @@
 </head>
 <body>
     <div class="container">
-        <div class="card" id="previewCard">
-            <h2 class="card-title">Custom Font Preview</h2>
+        <div class="input-column">
+            <h2 class="card-title">Input Text</h2>
             <div class="input-group">
                 <label for="textInput">Enter your text:</label>
-                <input type="text" id="textInput" placeholder="Type here...">
+                <textarea id="textInput" placeholder="Type here..."></textarea>
             </div>
-            <div class="input-group">
-                <label>Preview:</label>
-                <div id="preview" class="preview"></div>
+        </div>
+
+        <div class="preview-column">
+            <h2 class="card-title">Custom Font Preview</h2>
+            <div id="preview" class="preview">
+                <div id="previewText"></div>
             </div>
             <div id="fontStatus"></div>
         </div>
-        
-        <div class="settings-menu" id="settingsMenu">
-            <h3>Settings</h3>
-            <h4>Text Alignment</h4>
-            <div class="align-buttons">
-                <button class="align-button active" data-align="left">Left</button>
-                <button class="align-button" data-align="center">Center</button>
-                <button class="align-button" data-align="right">Right</button>
+
+        <div class="settings-column">
+            <h2 class="card-title">Settings</h2>
+            <h3>Text Alignment</h3>
+            <div class="align-grid">
+                <button class="align-button" data-h="left" data-v="flex-start">↖</button>
+                <button class="align-button" data-h="center" data-v="flex-start">↑</button>
+                <button class="align-button" data-h="right" data-v="flex-start">↗</button>
+                <button class="align-button" data-h="left" data-v="center">←</button>
+                <button class="align-button active" data-h="center" data-v="center">•</button>
+                <button class="align-button" data-h="right" data-v="center">→</button>
+                <button class="align-button" data-h="left" data-v="flex-end">↙</button>
+                <button class="align-button" data-h="center" data-v="flex-end">↓</button>
+                <button class="align-button" data-h="right" data-v="flex-end">↘</button>
             </div>
-            <h4>Background Color</h4>
+            <h3>Background Color</h3>
             <canvas id="colorWheel" width="150" height="150"></canvas>
         </div>
     </div>
@@ -136,29 +154,50 @@
             font.load().then(function(loadedFont) {
                 document.fonts.add(loadedFont);
                 preview.style.fontFamily = 'CustomFont, sans-serif';
+                adjustFontSize();
             }).catch(function(error) {
                 console.error('Error loading font:', error);
                 fontStatus.textContent = 'Failed to load custom font. Using default font.';
                 preview.style.fontFamily = 'sans-serif';
+                adjustFontSize();
             });
         }
 
         const textInput = document.getElementById('textInput');
         const preview = document.getElementById('preview');
+        const previewText = document.getElementById('previewText');
         const alignButtons = document.querySelectorAll('.align-button');
-        const previewCard = document.getElementById('previewCard');
         const colorWheel = document.getElementById('colorWheel');
         const ctx = colorWheel.getContext('2d');
 
-        textInput.addEventListener('input', function() {
-            preview.textContent = this.value;
-        });
+        function adjustFontSize() {
+            const previewWidth = preview.clientWidth;
+            const previewHeight = preview.clientHeight;
+            let fontSize = 100;
+            previewText.style.fontSize = fontSize + 'px';
+            
+            while ((previewText.scrollWidth > previewWidth || previewText.scrollHeight > previewHeight) && fontSize > 10) {
+                fontSize--;
+                previewText.style.fontSize = fontSize + 'px';
+            }
+        }
+
+        function updatePreviewText() {
+            previewText.textContent = textInput.value;
+            adjustFontSize();
+        }
+
+        textInput.addEventListener('input', updatePreviewText);
 
         alignButtons.forEach(button => {
             button.addEventListener('click', function() {
                 alignButtons.forEach(btn => btn.classList.remove('active'));
                 this.classList.add('active');
-                preview.style.textAlign = this.getAttribute('data-align');
+                const hAlign = this.getAttribute('data-h');
+                const vAlign = this.getAttribute('data-v');
+                previewText.style.textAlign = hAlign;
+                preview.style.justifyContent = hAlign;
+                preview.style.alignItems = vAlign;
             });
         });
 
@@ -194,11 +233,16 @@
             const y = event.clientY - rect.top;
             const imageData = ctx.getImageData(x, y, 1, 1);
             const color = `rgb(${imageData.data[0]}, ${imageData.data[1]}, ${imageData.data[2]})`;
-            previewCard.style.backgroundColor = color;
+            preview.style.backgroundColor = color;
         });
 
+        window.addEventListener('resize', adjustFontSize);
+
         // Load the custom font when the page loads
-        window.addEventListener('DOMContentLoaded', loadCustomFont);
+        window.addEventListener('DOMContentLoaded', function() {
+            loadCustomFont();
+            updatePreviewText();
+        });
     </script>
 </body>
 </html>
