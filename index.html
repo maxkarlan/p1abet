@@ -21,57 +21,51 @@
         }
         .container {
             display: flex;
-            height: 100%;
+            height: 90%;
         }
         .input-column, .settings-column {
             width: 20%;
             padding: 20px;
             background-color: white;
             box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
         }
         .preview-column {
-            width: 60%;
+            width: 50%;
             padding: 20px;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        .card-title {
-            font-size: 1.5em;
-            margin-bottom: 15px;
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        textarea {
-            width: 100%;
-            height: 200px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-            resize: vertical;
+        .preview-wrapper {
+            width: 90%;
+            padding-bottom: 90%; /* Creates a 1:1 aspect ratio */
+            position: relative;
         }
         .preview {
-            flex-grow: 1;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 20px;
+            border-radius: 10px;
             font-family: 'CustomFont', sans-serif;
-            box-sizing: border-box;
             background-color: white;
             overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative;
+            background-size: cover;
+            background-position: center;
         }
         #previewText {
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .align-grid {
             display: grid;
@@ -91,13 +85,6 @@
         .align-button.active {
             background-color: #ddd;
         }
-        #colorWheel {
-            margin-top: 10px;
-            cursor: crosshair;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
         .shape-buttons {
             display: flex;
             justify-content: space-between;
@@ -115,6 +102,22 @@
         .shape-button.active {
             background-color: #ddd;
         }
+        .background-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .background-option {
+            width: 100%;
+            padding-top: 100%; /* This creates a 1:1 aspect ratio */
+            background-size: cover;
+            background-position: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .background-option.active {
+            border-color: #007bff;
+        }
     </style>
 </head>
 <body>
@@ -129,8 +132,10 @@
 
         <div class="preview-column">
             <h2 class="card-title">Custom Font Preview</h2>
-            <div id="preview" class="preview">
-                <div id="previewText"></div>
+            <div class="preview-wrapper">
+                <div id="preview" class="preview">
+                    <div id="previewText"></div>
+                </div>
             </div>
             <div id="fontStatus"></div>
         </div>
@@ -155,13 +160,33 @@
                 <button class="align-button" data-h="center" data-v="flex-end">↓</button>
                 <button class="align-button" data-h="right" data-v="flex-end">↘</button>
             </div>
-            <h3>Background Color</h3>
-            <canvas id="colorWheel" width="150" height="150"></canvas>
+            <h3>Background Image</h3>
+            <div class="background-grid">
+                <div class="background-option" style="background-image: url('/images/bg1.png');" data-image="images/bg1.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg2.png');" data-image="images/bg2.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg3.png');" data-image="images/bg3.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg4.png');" data-image="images/bg4.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg5.png');" data-image="images/bg5.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg6.png');" data-image="images/bg6.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg7.png');" data-image="images/bg7.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg8.png');" data-image="images/bg8.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg9.png');" data-image="images/bg9.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg10.png');" data-image="images/bg10.png"></div>
+                <div class="background-option" style="background-image: url('/images/bg11.png');" data-image="images/bg11.png"></div>
+            </div>
         </div>
     </div>
 
     <script>
         let currentShape = 'rectangle';
+        let currentHAlign = 'center';
+        let currentVAlign = 'center';
+
+        const rectangleFontSizeFactor = 5;
+        const circleSpiralFontSizeFactor = 1.2;
+
+        const minFontSize = 10;
+        const maxFontSize = 300;
 
         function loadCustomFont() {
             const font = new FontFace('CustomFont', 'url(p1a.ttf)');
@@ -185,56 +210,136 @@
         const previewText = document.getElementById('previewText');
         const alignButtons = document.querySelectorAll('.align-button');
         const shapeButtons = document.querySelectorAll('.shape-button');
-        const colorWheel = document.getElementById('colorWheel');
-        const ctx = colorWheel.getContext('2d');
+        const backgroundOptions = document.querySelectorAll('.background-option');
 
-        function createCircleText(text) {
-            const chars = text.split('');
-            const radius = Math.min(preview.clientWidth, preview.clientHeight) / 2 * 0.8;
-            
-            return chars.map((char, i) => {
-                const angle = (i / chars.length) * 2 * Math.PI - Math.PI / 2; // Start from the top
-                const x = radius * Math.cos(angle);
-                const y = radius * Math.sin(angle);
-                return `<span style="position: absolute; left: 50%; top: 50%; transform: translate(${x}px, ${y}px) rotate(${angle + Math.PI/2}rad)">${char}</span>`;
-            }).join('');
-        }
-
-        function createSpiralText(text) {
-            const chars = text.split('');
-            const maxRadius = Math.min(preview.clientWidth, preview.clientHeight) / 2 * 0.9;
-            
-            return chars.map((char, i) => {
-                const angle = i * 0.5;
-                const radius = (i / chars.length) * maxRadius;
-                const x = radius * Math.cos(angle);
-                const y = radius * Math.sin(angle);
-                return `<span style="position: absolute; left: 50%; top: 50%; transform: translate(${x}px, ${y}px) rotate(${angle + Math.PI/2}rad)">${char}</span>`;
-            }).join('');
-        }
+        let currentBackgroundImage = '';
 
         function updatePreviewText() {
             const text = textInput.value;
             
-            // Reset styles
-            preview.style = '';
+            // Store current background image before resetting styles
+            currentBackgroundImage = preview.style.backgroundImage;
+            
+            // Reset only text-related styles
             previewText.style = '';
             
             switch(currentShape) {
                 case 'rectangle':
                     previewText.style.position = 'static';
-                    previewText.innerHTML = text;
+                    previewText.innerHTML = text || '&nbsp;';
                     applyRectangleAlignment();
                     break;
                 case 'circle':
                 case 'spiral':
-                    previewText.style.position = 'relative';
+                    previewText.style.position = 'absolute';
                     previewText.style.width = '100%';
                     previewText.style.height = '100%';
-                    previewText.innerHTML = currentShape === 'circle' ? createCircleText(text) : createSpiralText(text);
+                    previewText.innerHTML = text ? (currentShape === 'circle' ? createCircleText(text) : createSpiralText(text)) : '&nbsp;';
                     break;
             }
+            
+            // Restore background image
+            preview.style.backgroundImage = currentBackgroundImage;
+            
             adjustFontSize();
+            adjustTextColor();
+        }
+
+        function adjustFontSize() {
+            const previewSize = Math.min(preview.clientWidth, preview.clientHeight);
+            
+            if (currentShape === 'rectangle') {
+                let fontSize = previewSize / rectangleFontSizeFactor;
+                fontSize = Math.max(minFontSize, Math.min(fontSize, maxFontSize));
+                previewText.style.fontSize = fontSize + 'px';
+                
+                while ((previewText.scrollWidth > previewSize || previewText.scrollHeight > previewSize) && fontSize > minFontSize) {
+                    fontSize--;
+                    previewText.style.fontSize = fontSize + 'px';
+                }
+
+                while (previewText.scrollWidth < previewSize && previewText.scrollHeight < previewSize && fontSize < maxFontSize) {
+                    fontSize++;
+                    previewText.style.fontSize = fontSize + 'px';
+                    if (previewText.scrollWidth > previewSize || previewText.scrollHeight > previewSize) {
+                        fontSize--;
+                        previewText.style.fontSize = fontSize + 'px';
+                        break;
+                    }
+                }
+            } else {
+                const chars = Array.from(previewText.children);
+                const charCount = Math.max(1, chars.length);
+                
+                let fontSize = previewSize / Math.sqrt(charCount) * circleSpiralFontSizeFactor;
+                fontSize = Math.max(minFontSize, Math.min(fontSize, maxFontSize));
+                
+                chars.forEach(char => {
+                    char.style.fontSize = `${fontSize}px`;
+                });
+
+                let scale = 1;
+                let iterations = 0;
+                const maxIterations = 30;
+                
+                const checkOverlap = () => chars.some(char => {
+                    const rect = char.getBoundingClientRect();
+                    const margin = 5;
+                    return rect.left < preview.offsetLeft + margin || rect.top < preview.offsetTop + margin || 
+                           rect.right > preview.offsetLeft + previewSize - margin || rect.bottom > preview.offsetTop + previewSize - margin;
+                });
+
+                while (checkOverlap() && scale > 0.1 && iterations < maxIterations) {
+                    scale *= 0.95;
+                    fontSize *= 0.95;
+                    chars.forEach(char => {
+                        char.style.fontSize = `${fontSize}px`;
+                    });
+                    iterations++;
+                }
+
+                while (!checkOverlap() && iterations < maxIterations) {
+                    scale *= 1.05;
+                    fontSize *= 1.05;
+                    chars.forEach(char => {
+                        char.style.fontSize = `${fontSize}px`;
+                    });
+                    iterations++;
+                    if (checkOverlap()) {
+                        scale /= 1.05;
+                        fontSize /= 1.05;
+                        chars.forEach(char => {
+                            char.style.fontSize = `${fontSize}px`;
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+
+        function createCircleText(text) {
+            const chars = text.split('');
+            const radius = 45; // Percentage of half the preview size
+            
+            return chars.map((char, i) => {
+                const angle = (i / chars.length) * 2 * Math.PI - Math.PI / 2;
+                const x = 50 + radius * Math.cos(angle);
+                const y = 50 + radius * Math.sin(angle);
+                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}</span>`;
+            }).join('');
+        }
+
+        function createSpiralText(text) {
+            const chars = text.split('');
+            const maxRadius = 45; // Percentage of half the preview size
+            
+            return chars.map((char, i) => {
+                const angle = i * 0.5;
+                const radius = (i / chars.length) * maxRadius;
+                const x = 50 + radius * Math.cos(angle);
+                const y = 50 + radius * Math.sin(angle);
+                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}</span>`;
+            }).join('');
         }
 
         function applyRectangleAlignment() {
@@ -250,29 +355,30 @@
             const previewHeight = preview.clientHeight;
             
             if (currentShape === 'rectangle') {
-                let fontSize = Math.min(previewWidth, previewHeight) / 10; // Start with a reasonable size
+                let fontSize = Math.min(previewWidth, previewHeight) / rectangleFontSizeFactor;
+                fontSize = Math.max(minFontSize, Math.min(fontSize, maxFontSize));
                 previewText.style.fontSize = fontSize + 'px';
                 
-                while ((previewText.scrollWidth > previewWidth || previewText.scrollHeight > previewHeight) && fontSize > 10) {
-                    fontSize *= 0.9;
+                while ((previewText.scrollWidth > previewWidth || previewText.scrollHeight > previewHeight) && fontSize > minFontSize) {
+                    fontSize--;
                     previewText.style.fontSize = fontSize + 'px';
                 }
 
-                while (previewText.scrollWidth < previewWidth && previewText.scrollHeight < previewHeight && fontSize < 100) {
-                    fontSize *= 1.1;
+                while (previewText.scrollWidth < previewWidth && previewText.scrollHeight < previewHeight && fontSize < maxFontSize) {
+                    fontSize++;
                     previewText.style.fontSize = fontSize + 'px';
                     if (previewText.scrollWidth > previewWidth || previewText.scrollHeight > previewHeight) {
-                        fontSize /= 1.1;
+                        fontSize--;
                         previewText.style.fontSize = fontSize + 'px';
                         break;
                     }
                 }
             } else {
                 const chars = Array.from(previewText.children);
-                const charCount = chars.length;
+                const charCount = Math.max(1, chars.length);
                 
-                const sizeFactor = 0.8;  // Adjust this factor to control the initial size of the characters
-                let fontSize = Math.min(previewWidth, previewHeight) / Math.sqrt(charCount) * sizeFactor;
+                let fontSize = Math.min(previewWidth, previewHeight) / Math.sqrt(charCount) * circleSpiralFontSizeFactor;
+                fontSize = Math.max(minFontSize, Math.min(fontSize, maxFontSize));
                 
                 chars.forEach(char => {
                     char.style.fontSize = `${fontSize}px`;
@@ -340,46 +446,75 @@
             });
         });
 
-        function drawColorWheel() {
-            const centerX = colorWheel.width / 2;
-            const centerY = colorWheel.height / 2;
-            const radius = Math.min(centerX, centerY);
-
-            for (let angle = 0; angle < 360; angle++) {
-                const startAngle = (angle - 2) * Math.PI / 180;
-                const endAngle = (angle + 2) * Math.PI / 180;
-
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-                ctx.closePath();
-
-                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-                gradient.addColorStop(0, 'hsl(' + angle + ', 100%, 100%)');
-                gradient.addColorStop(1, 'hsl(' + angle + ', 100%, 50%)');
-
-                ctx.fillStyle = gradient;
-                ctx.fill();
-            }
-        }
-
-        drawColorWheel();
-
-        colorWheel.addEventListener('click', function(event) {
-            const rect = colorWheel.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            const imageData = ctx.getImageData(x, y, 1, 1);
-            const color = `rgb(${imageData.data[0]}, ${imageData.data[1]}, ${imageData.data[2]})`;
-            preview.style.backgroundColor = color;
+        backgroundOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                backgroundOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                const imageUrl = this.getAttribute('data-image');
+                currentBackgroundImage = `url('${imageUrl}')`;
+                preview.style.backgroundImage = currentBackgroundImage;
+                adjustTextColor();
+            });
         });
 
         window.addEventListener('DOMContentLoaded', function() {
             loadCustomFont();
-            updatePreviewText(); // This will now set the initial font size correctly
+            updatePreviewText();
         });
 
-        window.addEventListener('resize', updatePreviewText); // Changed from adjustFontSize to updatePreviewText
+        window.addEventListener('resize', updatePreviewText);
+
+    // Function to adjust text color based on background brightness
+    function adjustTextColor() {
+        const computedStyle = window.getComputedStyle(preview);
+        const bgImage = computedStyle.backgroundImage;
+        
+        if (bgImage && bgImage !== 'none') {
+            // Create a temporary canvas to analyze the background image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+                
+                // Sample the center pixel of the image
+                const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
+                const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
+                
+                // Set text color based on background brightness
+                previewText.style.color = brightness > 128 ? 'black' : 'white';
+            };
+            
+            img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
+        } else {
+            // If no background image, default to black text
+            previewText.style.color = 'black';
+        }
+    }
+
+    backgroundOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const rect = option.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const imageData = ctx.getImageData(x, y, 1, 1);
+            const color = `rgb(${imageData.data[0]}, ${imageData.data[1]}, ${imageData.data[2]})`;
+            preview.style.backgroundOptions = color;
+            setTimeout(adjustTextColor, 100);
+        });
+    });
+
+    window.addEventListener('DOMContentLoaded', function() {
+        loadCustomFont();
+        updatePreviewText();
+    });
+
+    window.addEventListener('resize', function() {
+        updatePreviewText();
+    });
     </script>
 </body>
 </html>
