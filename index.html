@@ -113,10 +113,16 @@
             background-size: cover;
             background-position: center;
             cursor: pointer;
-            border: 2px solid transparent;
+            border: 2px solid #ddd; /* Add a light grey border */
+            border-radius: 8px; /* Optional: rounded corners */
+            transition: border-color 0.3s ease; /* Smooth transition for hover effect */
+        }
+        .background-option:hover {
+            border-color: #4c4c4c; /* Darker border on hover */
         }
         .background-option.active {
             border-color: #007bff;
+            box-shadow: 0 0 0 4px #007bff; /* Optional: adds an outer glow effect */
         }
     </style>
 </head>
@@ -223,27 +229,16 @@
                     const img = new Image();
                     img.src = url;
                     imageCache.set(url, img);
-                    
-                    img.onload = () => {
-                        console.log(`Image loaded: ${url}`);
-                    };
-                    
-                    img.onerror = () => {
-                        console.error(`Failed to load image: ${url}`);
-                        imageCache.delete(url);
-                    };
                 }
             });
         }
        
         function setBackgroundImage(imageUrl) {
-            if (imageCache.has(imageUrl)) {
-                currentBackgroundImage = `url('${imageUrl}')`;
-                preview.style.backgroundImage = currentBackgroundImage;
+            currentBackgroundImage = `url('${imageUrl}')`;
+            preview.style.backgroundImage = currentBackgroundImage;
+            requestAnimationFrame(() => {
                 adjustTextColor();
-            } else {
-                console.error(`Image not preloaded: ${imageUrl}`);
-            }
+            });
         }
 
         function updatePreviewText() {
@@ -484,7 +479,6 @@
                 this.classList.add('active');
                 const imageUrl = this.getAttribute('data-image');
                 setBackgroundImage(imageUrl);
-                adjustTextColor();
             });
         });
 
@@ -498,34 +492,29 @@
 
     // Function to adjust text color based on background brightness
     function adjustTextColor() {
-        const computedStyle = window.getComputedStyle(preview);
-        const bgImage = computedStyle.backgroundImage;
-        
-        if (bgImage && bgImage !== 'none') {
-            // Create a temporary canvas to analyze the background image
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
+            const computedStyle = window.getComputedStyle(preview);
+            const bgImage = computedStyle.backgroundImage;
             
-            img.onload = function() {
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0, img.width, img.height);
-                
-                // Sample the center pixel of the image
-                const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
-                const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
-                
-                // Set text color based on background brightness
-                previewText.style.color = brightness > 128 ? 'black' : 'white';
-            };
-            
-            img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
-        } else {
-            // If no background image, default to black text
-            previewText.style.color = 'black';
+            if (bgImage && bgImage !== 'none') {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+                    
+                    const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
+                    const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
+                    
+                    previewText.style.color = brightness > 128 ? 'black' : 'white';
+                };
+                img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
+            } else {
+                previewText.style.color = 'black';
+            }
         }
-    }
+
 
     backgroundOptions.forEach(option => {
         option.addEventListener('click', function() {
