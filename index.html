@@ -213,6 +213,38 @@
         const backgroundOptions = document.querySelectorAll('.background-option');
 
         let currentBackgroundImage = '';
+        const imageCache = new Map();
+
+        function preloadImages() {
+            const imageUrls = Array.from(backgroundOptions).map(option => option.getAttribute('data-image'));
+            
+            imageUrls.forEach(url => {
+                if (!imageCache.has(url)) {
+                    const img = new Image();
+                    img.src = url;
+                    imageCache.set(url, img);
+                    
+                    img.onload = () => {
+                        console.log(`Image loaded: ${url}`);
+                    };
+                    
+                    img.onerror = () => {
+                        console.error(`Failed to load image: ${url}`);
+                        imageCache.delete(url);
+                    };
+                }
+            });
+        }
+       
+        function setBackgroundImage(imageUrl) {
+            if (imageCache.has(imageUrl)) {
+                currentBackgroundImage = `url('${imageUrl}')`;
+                preview.style.backgroundImage = currentBackgroundImage;
+                adjustTextColor();
+            } else {
+                console.error(`Image not preloaded: ${imageUrl}`);
+            }
+        }
 
         function updatePreviewText() {
             const text = textInput.value;
@@ -451,14 +483,14 @@
                 backgroundOptions.forEach(opt => opt.classList.remove('active'));
                 this.classList.add('active');
                 const imageUrl = this.getAttribute('data-image');
-                currentBackgroundImage = `url('${imageUrl}')`;
-                preview.style.backgroundImage = currentBackgroundImage;
+                setBackgroundImage(imageUrl);
                 adjustTextColor();
             });
         });
 
         window.addEventListener('DOMContentLoaded', function() {
             loadCustomFont();
+            preloadImages();
             updatePreviewText();
         });
 
