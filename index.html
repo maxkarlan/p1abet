@@ -177,46 +177,50 @@
             font.load().then(function(loadedFont) {
                 document.fonts.add(loadedFont);
                 preview.style.fontFamily = 'CustomFont, sans-serif';
+                fontStatus.textContent = 'Custom font loaded successfully!';
                 updatePreviewText();
-                adjustFontSize(); // Call this function after the font has loaded
+                adjustFontSize();
             }).catch(function(error) {
                 console.error('Error loading font:', error);
-                fontStatus.textContent = 'Failed to load custom font. Using default font.';
+                fontStatus.textContent = 'Failed to load custom font: ' + error.message + '. Using default font.';
                 preview.style.fontFamily = 'sans-serif';
                 updatePreviewText();
-                adjustFontSize(); // Still call this even if the custom font fails to load
+                adjustFontSize();
             });
         }
 
-        function updatePreviewText() {
-            const text = textInput.value;
+        // function updatePreviewText() {
+        //     const text = textInput.value;
             
-            previewText.style = '';
-            previewText.style.position = 'absolute';
+        //     previewText.style = '';
+        //     previewText.style.position = 'absolute';
             
-            switch(currentShape) {
-                case 'rectangle':
-                    previewText.innerHTML = text || '&nbsp;';
-                    break;
-                case 'circle':
-                    previewText.innerHTML = createCircleText(text);
-                    previewText.style.width = '50%';
-                    previewText.style.height = '50%';
-                    break;
-                case 'spiral':
-                    previewText.innerHTML = createSpiralText(text);
-                    previewText.style.width = '50%';
-                    previewText.style.height = '50%';
-                    break;
-            }
+        //     switch(currentShape) {
+        //         case 'rectangle':
+        //             previewText.innerHTML = text || '&nbsp;';
+        //             break;
+        //         case 'circle':
+        //             previewText.innerHTML = createCircleText(text);
+        //             previewText.style.width = '50%';
+        //             previewText.style.height = '50%';
+        //             break;
+        //         case 'spiral':
+        //             previewText.innerHTML = createSpiralText(text);
+        //             previewText.style.width = '50%';
+        //             previewText.style.height = '50%';
+        //             break;
+        //     }
             
-            adjustFontSize();
-            centerText();
-        }
+        //     adjustFontSize();
+        //     centerText();
+        // }
 
         let currentFontSize = 50; // Default size (middle of the slider)
+        let currentFontColor = 'black'; // Default font color
         const sizeSlider = document.getElementById('sizeSlider');
         let textPosition = { left: 0, top: 0 }; // Track text position
+        let isDragging = false;
+        let startX, startY;
 
         function updatePreviewText() {
             const text = textInput.value;
@@ -224,17 +228,22 @@
             // Store current position before updating
             textPosition.left = parseFloat(previewText.style.left) || 0;
             textPosition.top = parseFloat(previewText.style.top) || 0;
-            
+
             previewText.style = '';
             previewText.style.position = 'absolute';
             previewText.style.left = `${textPosition.left}px`;
             previewText.style.top = `${textPosition.top}px`;
+            previewText.style.cursor = 'move';
+            previewText.style.userSelect = 'none';
+            previewText.style.color = currentFontColor; // Apply current font color
             
             switch(currentShape) {
                 case 'rectangle':
                     previewText.innerHTML = text || '&nbsp;';
-                    previewText.style.width = '100%';
-                    previewText.style.height = '100%';
+                    previewText.style.width = 'auto';
+                    previewText.style.height = 'auto';
+                    previewText.style.maxWidth = '100%';
+                    previewText.style.maxHeight = '100%';
                     previewText.style.display = 'flex';
                     previewText.style.justifyContent = 'center';
                     previewText.style.alignItems = 'center';
@@ -245,11 +254,14 @@
                     previewText.style.width = size;
                     previewText.style.height = size;
                     previewText.innerHTML = currentShape === 'circle' ? createCircleText(text) : createSpiralText(text);
+                    // Ensure all spans in circle/spiral have the correct color
+                    Array.from(previewText.children).forEach(span => {
+                        span.style.color = currentFontColor;
+                    });
                     break;
             }
             
             adjustFontSize();
-            adjustTextPosition();
         }
 
         function adjustFontSize() {
@@ -367,9 +379,7 @@
         function setBackgroundImage(imageUrl) {
             currentBackgroundImage = `url('${imageUrl}')`;
             preview.style.backgroundImage = currentBackgroundImage;
-            requestAnimationFrame(() => {
-                adjustTextColor();
-            });
+            adjustTextColor(); // This will update the text color and call updatePreviewText
         }
 
         function adjustTextColor() {
@@ -388,17 +398,21 @@
                     const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
                     const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
                     
-                    previewText.style.color = brightness > 128 ? 'black' : 'white';
+                    currentFontColor = brightness > 128 ? 'black' : 'white';
+                    updatePreviewText(); // Update text with new color
                 };
                 img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
             } else {
-                previewText.style.color = 'black';
+                currentFontColor = 'black';
+                updatePreviewText(); // Update text with new color
             }
         }
 
-        // Draggable functionality
-        let isDragging = false;
-        let startX, startY;
+
+        // // Draggable functionality
+        // let isDragging = false;
+        // let startX, startY;
+
 
         previewText.addEventListener('mousedown', startDragging);
         document.addEventListener('mousemove', drag);
