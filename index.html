@@ -107,6 +107,12 @@
         #sizeSlider {
             width: 100%;
         }
+        .slider-container {
+            margin-top: 15px;
+        }
+        #sizeSlider, #rotationDial {
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -120,6 +126,10 @@
             <div class="slider-container">
                 <label for="sizeSlider">Text Size:</label>
                 <input type="range" id="sizeSlider" min="5" max="100" value="50">
+            </div>
+            <div class="slider-container">
+                <label for="rotationDial">Text Rotation:</label>
+                <input type="range" id="rotationDial" min="0" max="359" value="0">
             </div>
         </div>
 
@@ -218,6 +228,8 @@
         let currentFontSize = 50; // Default size (middle of the slider)
         let currentFontColor = 'black'; // Default font color
         const sizeSlider = document.getElementById('sizeSlider');
+        let currentRotation = 0;
+        const rotationDial = document.getElementById('rotationDial');
         let textPosition = { left: 0, top: 0 }; // Track text position
         let isDragging = false;
         let startX, startY;
@@ -236,6 +248,8 @@
             previewText.style.cursor = 'move';
             previewText.style.userSelect = 'none';
             previewText.style.color = currentFontColor; // Apply current font color
+            previewText.style.transform = `rotate(${currentRotation}deg)`;
+            previewText.style.transformOrigin = 'center center';
             
             switch(currentShape) {
                 case 'rectangle':
@@ -264,6 +278,11 @@
             adjustFontSize();
             adjustTextPosition();
         }
+        
+        rotationDial.addEventListener('input', function() {
+            currentRotation = parseInt(this.value);
+            updatePreviewText();
+        });
 
         function adjustFontSize() {
             const previewSize = Math.min(preview.clientWidth, preview.clientHeight);
