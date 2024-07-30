@@ -223,6 +223,7 @@
 
         function preloadImages() {
             const imageUrls = Array.from(backgroundOptions).map(option => option.getAttribute('data-image'));
+            console.log('Preloading images:', imageUrls);
             
             imageUrls.forEach(url => {
                 if (!imageCache.has(url)) {
@@ -234,6 +235,7 @@
         }
        
         function setBackgroundImage(imageUrl) {
+            console.log('Setting background image:', imageUrl);
             currentBackgroundImage = `url('${imageUrl}')`;
             preview.style.backgroundImage = currentBackgroundImage;
             requestAnimationFrame(() => {
