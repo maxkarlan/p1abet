@@ -23,13 +23,15 @@
             display: flex;
             height: 90%;
         }
+
         .input-column, .settings-column {
-            width: 20%;
+            width: 25%; /* Increased from 20% to give more space for inputs */
             padding: 20px;
             background-color: white;
             box-shadow: 0 0 5px rgba(0,0,0,0.1);
             overflow-y: auto;
         }
+
         .preview-column {
             width: 50%;
             padding: 20px;
@@ -123,6 +125,14 @@
                 <label for="textInput">Enter your text:</label>
                 <textarea id="textInput" placeholder="Type here..."></textarea>
             </div>
+            
+            <h3>Text Shape</h3>
+            <div class="shape-buttons">
+                <button class="shape-button active" data-shape="rectangle">Rectangle</button>
+                <button class="shape-button" data-shape="circle">Circle</button>
+                <button class="shape-button" data-shape="spiral">Spiral</button>
+            </div>
+            
             <div class="slider-container">
                 <label for="sizeSlider">Text Size:</label>
                 <input type="range" id="sizeSlider" min="5" max="100" value="50">
@@ -132,7 +142,7 @@
                 <input type="range" id="rotationDial" min="0" max="359" value="0">
             </div>
         </div>
-
+    
         <div class="preview-column">
             <h2 class="card-title">Custom Font Preview</h2>
             <div class="preview-wrapper">
@@ -142,15 +152,9 @@
             </div>
             <div id="fontStatus"></div>
         </div>
-
+    
         <div class="settings-column">
             <h2 class="card-title">Settings</h2>
-            <h3>Text Shape</h3>
-            <div class="shape-buttons">
-                <button class="shape-button active" data-shape="rectangle">Rectangle</button>
-                <button class="shape-button" data-shape="circle">Circle</button>
-                <button class="shape-button" data-shape="spiral">Spiral</button>
-            </div>
             <h3>Background Image</h3>
             <div class="background-grid">
                 <div class="background-option" style="background-image: url('images/bg1.png');" data-image="images/bg1.png"></div>
@@ -199,32 +203,6 @@
             });
         }
 
-        // function updatePreviewText() {
-        //     const text = textInput.value;
-            
-        //     previewText.style = '';
-        //     previewText.style.position = 'absolute';
-            
-        //     switch(currentShape) {
-        //         case 'rectangle':
-        //             previewText.innerHTML = text || '&nbsp;';
-        //             break;
-        //         case 'circle':
-        //             previewText.innerHTML = createCircleText(text);
-        //             previewText.style.width = '50%';
-        //             previewText.style.height = '50%';
-        //             break;
-        //         case 'spiral':
-        //             previewText.innerHTML = createSpiralText(text);
-        //             previewText.style.width = '50%';
-        //             previewText.style.height = '50%';
-        //             break;
-        //     }
-            
-        //     adjustFontSize();
-        //     centerText();
-        // }
-
         let currentFontSize = 50; // Default size (middle of the slider)
         let currentFontColor = 'black'; // Default font color
         const sizeSlider = document.getElementById('sizeSlider');
@@ -237,17 +215,15 @@
         function updatePreviewText() {
             const text = textInput.value;
             
-            // Store current position before updating
-            textPosition.left = parseFloat(previewText.style.left) || 0;
-            textPosition.top = parseFloat(previewText.style.top) || 0;
-
+            // Store the current center position before updating
+            const currentCenterX = textPosition.left + previewText.offsetWidth / 2;
+            const currentCenterY = textPosition.top + previewText.offsetHeight / 2;
+            
             previewText.style = '';
             previewText.style.position = 'absolute';
-            previewText.style.left = `${textPosition.left}px`;
-            previewText.style.top = `${textPosition.top}px`;
             previewText.style.cursor = 'move';
             previewText.style.userSelect = 'none';
-            previewText.style.color = currentFontColor; // Apply current font color
+            previewText.style.color = currentFontColor;
             previewText.style.transform = `rotate(${currentRotation}deg)`;
             previewText.style.transformOrigin = 'center center';
             
@@ -256,8 +232,8 @@
                     previewText.innerHTML = text || '&nbsp;';
                     previewText.style.width = 'auto';
                     previewText.style.height = 'auto';
-                    previewText.style.maxWidth = '100%';
-                    previewText.style.maxHeight = '100%';
+                    previewText.style.maxWidth = 'none'; // Remove max-width constraint
+                    previewText.style.maxHeight = 'none'; // Remove max-height constraint
                     previewText.style.display = 'flex';
                     previewText.style.justifyContent = 'center';
                     previewText.style.alignItems = 'center';
@@ -268,7 +244,6 @@
                     previewText.style.width = size;
                     previewText.style.height = size;
                     previewText.innerHTML = currentShape === 'circle' ? createCircleText(text) : createSpiralText(text);
-                    // Ensure all spans in circle/spiral have the correct color
                     Array.from(previewText.children).forEach(span => {
                         span.style.color = currentFontColor;
                     });
@@ -276,46 +251,56 @@
             }
             
             adjustFontSize();
-            adjustTextPosition();
+            
+            // Reposition the text to maintain its center point
+            repositionText(currentCenterX, currentCenterY);
         }
+
         
         rotationDial.addEventListener('input', function() {
             currentRotation = parseInt(this.value);
             updatePreviewText();
         });
 
+
         function adjustFontSize() {
             const previewSize = Math.min(preview.clientWidth, preview.clientHeight);
-            const maxFontSize = previewSize / 2; // Maximum font size (50% of preview size)
+            let minFontSize, maxFontSize;
+
+            switch(currentShape) {
+                case 'rectangle':
+                    minFontSize = 3; // Lower minimum for rectangles
+                    maxFontSize = previewSize / 2;
+                    break;
+                case 'circle':
+                case 'spiral':
+                    minFontSize = 3; // Higher minimum for circles and spirals
+                    maxFontSize = previewSize / 3; // Slightly smaller maximum for better fit
+                    break;
+            }
+
+            const fontSize = minFontSize + (currentFontSize / 100) * (maxFontSize - minFontSize);
             
             if (currentShape === 'rectangle') {
-                let fontSize = (currentFontSize / 100) * maxFontSize;
                 previewText.style.fontSize = `${fontSize}px`;
-                
-                // Adjust if text overflows
-                while ((previewText.scrollWidth > preview.clientWidth || previewText.scrollHeight > preview.clientHeight) && fontSize > 5) {
-                    fontSize--;
-                    previewText.style.fontSize = `${fontSize}px`;
-                }
             } else {
                 const chars = Array.from(previewText.children);
-                const charCount = Math.max(1, chars.length);
-                
-                let fontSize = (maxFontSize / Math.sqrt(charCount)) * (currentFontSize / 100);
-                fontSize = Math.max(5, fontSize);
-                
                 chars.forEach(char => {
                     char.style.fontSize = `${fontSize}px`;
                 });
-
-                // Adjust if text overflows
-                while (checkOverlap(chars) && fontSize > 5) {
-                    fontSize *= 0.95;
-                    chars.forEach(char => {
-                        char.style.fontSize = `${fontSize}px`;
-                    });
-                }
             }
+        }
+
+        function repositionText(centerX, centerY) {
+            const newLeft = centerX - previewText.offsetWidth / 2;
+            const newTop = centerY - previewText.offsetHeight / 2;
+            
+            previewText.style.left = `${newLeft}px`;
+            previewText.style.top = `${newTop}px`;
+            
+            // Update the textPosition object
+            textPosition.left = newLeft;
+            textPosition.top = newTop;
         }
 
         function checkOverlap(chars) {
@@ -327,32 +312,36 @@
             });
         }
 
-        function adjustTextPosition() {
-            const previewRect = preview.getBoundingClientRect();
-            const textRect = previewText.getBoundingClientRect();
+        // function adjustTextPosition() {
+        //     const previewRect = preview.getBoundingClientRect();
+        //     const textRect = previewText.getBoundingClientRect();
             
-            // Adjust position if text is outside the preview area
-            if (textRect.left < previewRect.left) {
-                textPosition.left = 0;
-            } else if (textRect.right > previewRect.right) {
-                textPosition.left = previewRect.width - textRect.width;
-            }
+        //     // Adjust position if text is outside the preview area
+        //     if (textRect.left < previewRect.left) {
+        //         textPosition.left = 0;
+        //     } else if (textRect.right > previewRect.right) {
+        //         textPosition.left = previewRect.width - textRect.width;
+        //     }
             
-            if (textRect.top < previewRect.top) {
-                textPosition.top = 0;
-            } else if (textRect.bottom > previewRect.bottom) {
-                textPosition.top = previewRect.height - textRect.height;
-            }
+        //     if (textRect.top < previewRect.top) {
+        //         textPosition.top = 0;
+        //     } else if (textRect.bottom > previewRect.bottom) {
+        //         textPosition.top = previewRect.height - textRect.height;
+        //     }
             
-            previewText.style.left = `${textPosition.left}px`;
-            previewText.style.top = `${textPosition.top}px`;
-        }
+        //     previewText.style.left = `${textPosition.left}px`;
+        //     previewText.style.top = `${textPosition.top}px`;
+        // }
 
         function centerText() {
             const left = (preview.clientWidth - previewText.offsetWidth) / 2;
             const top = (preview.clientHeight - previewText.offsetHeight) / 2;
             previewText.style.left = `${left}px`;
             previewText.style.top = `${top}px`;
+            
+            // Update the textPosition object
+            textPosition.left = left;
+            textPosition.top = top;
         }
 
         function createCircleText(text) {
@@ -369,14 +358,80 @@
 
         function createSpiralText(text) {
             const chars = text.split('');
-            const maxRadius = 45; // Percentage of half the preview size
-            
+            const baseRadius = 5; // Starting radius
+            const radiusIncrement = 0.5; // How much the radius increases per character
+            const angleIncrement = 0.5; // Angle between characters (in radians)
+            const centerX = 50; // Center X coordinate (in percentage)
+            const centerY = 50; // Center Y coordinate (in percentage)
+
             return chars.map((char, i) => {
-                const angle = i * 0.5;
-                const radius = (i / chars.length) * maxRadius;
+                const angle = i * angleIncrement;
+                const radius = baseRadius + i * radiusIncrement;
+                
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+
+                // Calculate font size (larger at the center, smaller as it spirals out)
+                const fontSize = Math.max(0.5, 3 - (i * 0.05)); // Adjust these values as needed
+
+                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad); font-size: ${fontSize}em;">${char}</span>`;
+            }).join('');
+        }
+
+        // function createSpiralText(text) {
+        //     const chars = text.split('');
+        //     const charCount = chars.length;
+        //     const maxRadius = 45; // Percentage of half the preview size
+        //     const baseAngle = .5; // Base angle increment
+        //     const maxSpaces = 10; // Maximum number of spaces at the start
+        //     const minSpaces = 1; // Minimum number of spaces at the end
+
+        //     return chars.map((char, i) => {
+        //         // Calculate decreasing angle increment
+        //         const angleDecayFactor = 1 - (i / charCount) * 0.05; // Adjust 0.5 to control decay rate
+        //         const angle = i * baseAngle * angleDecayFactor;
+
+        //         // Calculate radius with a slight increase for longer texts
+        //         const radiusFactor = 1 + (charCount / 100); // Adjust divisor to control expansion
+        //         const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
+
+        //         // Calculate decreasing space
+        //         const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
+        //         const spaces = ' '.repeat(Math.max(minSpaces, spaceCount));
+
+        //         const x = 50 + radius * Math.cos(angle);
+        //         const y = 50 + radius * Math.sin(angle);
+
+        //         return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
+        //     }).join('');
+        // }
+
+        function createSpiralText(text) {
+            const chars = text.split('');
+            const charCount = chars.length;
+            const maxRadius = 45; // Percentage of half the preview size
+            const baseAngle = .5; // Base angle increment
+            const maxSpaces = 10; // Maximum number of spaces at the start
+            const minSpaces = 1; // Minimum number of spaces at the end
+
+            return chars.map((char, i) => {
+                // Calculate decreasing angle increment
+                const angleDecayFactor = 1 - (i / charCount) * 0.05; // Adjust 0.5 to control decay rate
+                const angle = i * baseAngle * angleDecayFactor;
+
+                // Calculate radius with a slight increase for longer texts
+                // const radiusFactor = 1 + (charCount / 25); // Adjust divisor to control expansion
+                const radiusFactor = 1 + charCount/10;
+                const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
+
+                // Calculate decreasing space
+                const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
+                const spaces = ' '.repeat(Math.max(minSpaces, spaceCount));
+
                 const x = 50 + radius * Math.cos(angle);
                 const y = 50 + radius * Math.sin(angle);
-                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}</span>`;
+
+                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
             }).join('');
         }
 
@@ -428,12 +483,6 @@
             }
         }
 
-
-        // // Draggable functionality
-        // let isDragging = false;
-        // let startX, startY;
-
-
         previewText.addEventListener('mousedown', startDragging);
         document.addEventListener('mousemove', drag);
         document.addEventListener('mouseup', stopDragging);
@@ -450,15 +499,11 @@
             let newX = e.clientX - startX;
             let newY = e.clientY - startY;
             
-            // Constrain movement within the preview area
-            newX = Math.max(0, Math.min(newX, preview.clientWidth - previewText.offsetWidth));
-            newY = Math.max(0, Math.min(newY, preview.clientHeight - previewText.offsetHeight));
-            
+            // Remove constraints, allowing text to move freely
             previewText.style.left = `${newX}px`;
             previewText.style.top = `${newY}px`;
         }
 
-        // Update dragging functionality to store position
         function stopDragging() {
             isDragging = false;
             textPosition.left = parseFloat(previewText.style.left);
