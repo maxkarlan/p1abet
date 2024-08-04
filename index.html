@@ -227,7 +227,7 @@
         let currentRotation = 0;
         const rotationDial = document.getElementById('rotationDial');
         let textPosition = { left: 50, top: 50 }; // Initialize to center of preview
-        let isDragging = false;
+        // let isDragging = false;
         let startX, startY;
 
         function updatePreviewText() {
@@ -238,7 +238,9 @@
             // const currentCenterY = (textPosition.top + previewText.offsetHeight / 2) / preview.offsetHeight * 100;
             
             previewText.style = '';
-            previewText.style.position = 'absolute';
+            // Update text position
+            previewText.style.left = `${textPosition.left}%`;
+            previewText.style.top = `${textPosition.top}%`;
             previewText.style.cursor = 'move';
             previewText.style.userSelect = 'none';
             previewText.style.color = currentFontColor;
@@ -509,11 +511,31 @@
         document.addEventListener('mousemove', drag);
         document.addEventListener('mouseup', stopDragging);
 
+        let isDragging = false;
+        let dragStartX, dragStartY;
+        let textStartLeft, textStartTop;
+
+        function initDragFunctionality() {
+            const previewContainer = document.getElementById('preview');
+            
+            previewContainer.addEventListener('mousedown', startDragging);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDragging);
+            
+            // Remove the event listener from previewText if it exists
+            previewText.removeEventListener('mousedown', startDragging);
+        }
+
         function startDragging(e) {
             isDragging = true;
             const rect = preview.getBoundingClientRect();
-            startX = e.clientX - rect.left;
-            startY = e.clientY - rect.top;
+            dragStartX = e.clientX - rect.left;
+            dragStartY = e.clientY - rect.top;
+            textStartLeft = textPosition.left;
+            textStartTop = textPosition.top;
+            
+            // Change cursor style
+            preview.style.cursor = 'grabbing';
         }
 
         function drag(e) {
@@ -523,9 +545,13 @@
             let newX = e.clientX - rect.left;
             let newY = e.clientY - rect.top;
             
-            // Convert pixel positions to percentages
-            textPosition.left = (newX / rect.width) * 100;
-            textPosition.top = (newY / rect.height) * 100;
+            // Calculate the change in position
+            let deltaX = newX - dragStartX;
+            let deltaY = newY - dragStartY;
+            
+            // Update text position based on the change
+            textPosition.left = textStartLeft + (deltaX / rect.width) * 100;
+            textPosition.top = textStartTop + (deltaY / rect.height) * 100;
             
             // Clamp values between 0 and 100
             textPosition.left = Math.max(0, Math.min(100, textPosition.left));
@@ -536,6 +562,8 @@
 
         function stopDragging() {
             isDragging = false;
+            // Reset cursor style
+            preview.style.cursor = 'default';
         }
 
         textInput.addEventListener('input', updatePreviewText);
@@ -557,10 +585,12 @@
             });
         });
 
+        // Call this function after the DOM is loaded
         window.addEventListener('DOMContentLoaded', function() {
             loadCustomFont();
             preloadImages();
             updatePreviewText();
+            initDragFunctionality(); // Initialize the new drag functionality
         });
 
         window.addEventListener('resize', updatePreviewText);
