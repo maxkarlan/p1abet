@@ -137,9 +137,20 @@
         }
         .slider-container {
             margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .slider-wrapper {
+            width: 85%;
         }
         .size-slider, .rotation-dial {
             width: 100%;
+        }
+        .slider-value {
+            width: 15%;
+            text-align: center;
+            font-size: 14px;
         }
         .text-box-controls {
             margin-top: 20px;
@@ -375,10 +386,16 @@
                         </div>
                     </div>
                     <div class="slider-container">
-                        <input type="range" id="sizeSlider-${textBox.id}" class="size-slider" min="5" max="100" value="50">
+                        <div class="slider-wrapper">
+                            <input type="range" id="sizeSlider-${textBox.id}" class="size-slider" min="5" max="100" value="50">
+                        </div>
+                        <div class="slider-value" id="sizeValue-${textBox.id}">50</div>
                     </div>
                     <div class="slider-container">
-                        <input type="range" id="rotationDial-${textBox.id}" class="rotation-dial" min="0" max="359" value="0">
+                        <div class="slider-wrapper">
+                            <input type="range" id="rotationDial-${textBox.id}" class="rotation-dial" min="0" max="359" value="0">
+                        </div>
+                        <div class="slider-value" id="rotationValue-${textBox.id}">0°</div>
                     </div>
                 </div>
             `;
@@ -395,8 +412,14 @@
                 textBox.formatOption = e.target.value;
                 updateTextBox(textBox);
             });
-            document.getElementById(`sizeSlider-${textBox.id}`).addEventListener('input', () => updateTextBox(textBox));
-            document.getElementById(`rotationDial-${textBox.id}`).addEventListener('input', () => updateTextBox(textBox));
+            document.getElementById(`sizeSlider-${textBox.id}`).addEventListener('input', (e) => {
+                document.getElementById(`sizeValue-${textBox.id}`).textContent = e.target.value;
+                updateTextBox(textBox);
+            });
+            document.getElementById(`rotationDial-${textBox.id}`).addEventListener('input', (e) => {
+                document.getElementById(`rotationValue-${textBox.id}`).textContent = `${e.target.value}°`;
+                updateTextBox(textBox);
+            });
             
             // Add event listener for remove button
             const removeButton = container.querySelector('.remove-text-box');
@@ -493,6 +516,10 @@
             textBox.formatOption = formatOptionsSelect.value;
             textBox.size = parseInt(sizeSlider.value);
             textBox.rotation = parseInt(rotationDial.value);
+
+            // Update the numeric displays
+            document.getElementById(`sizeValue-${textBox.id}`).textContent = textBox.size;
+            document.getElementById(`rotationValue-${textBox.id}`).textContent = `${textBox.rotation}°`;
 
             previewElement.style.left = `${textBox.position.left}%`;
             previewElement.style.top = `${textBox.position.top}%`;
