@@ -144,7 +144,8 @@
                 <select id="shapeSelect">
                     <option value="rectangle">Default</option>
                     <option value="circle">Circle</option>
-                    <option value="spiral">Spiral</option>
+                    <option value="spiral1">Spiral 1</option>
+                    <option value="spiral2">Spiral 2</option>
                 </select>
             </div>
             
@@ -259,15 +260,31 @@
                     previewText.style.alignItems = 'center';
                     break;
                 case 'circle':
-                case 'spiral':
+                case 'spiral1':
+                case 'spiral2':
                     const size = currentFontSize + '%';
                     previewText.style.width = size;
                     previewText.style.height = size;
-                    previewText.innerHTML = currentShape === 'circle' ? createCircleText(text) : createSpiralText(text);
+                    if (currentShape === 'circle') {
+                        previewText.innerHTML = createCircleText(text);
+                    } else if (currentShape === 'spiral1') {
+                        previewText.innerHTML = createSpiral1Text(text);
+                    } else {
+                        previewText.innerHTML = createSpiral2Text(text);
+                    }
                     Array.from(previewText.children).forEach(span => {
                         span.style.color = currentFontColor;
                     });
                     break;
+            }
+
+            if (currentShape !== 'rectangle') {
+                const size = currentFontSize + '%';
+                previewText.style.width = size;
+                previewText.style.height = size;
+                Array.from(previewText.children).forEach(span => {
+                    span.style.color = currentFontColor;
+                });
             }
             
             adjustFontSize();
@@ -294,7 +311,8 @@
                 maxFontSize = 10; // Maximum font size in vw units
                     break;
                 case 'circle':
-                case 'spiral':
+                case 'spiral1':
+                case 'spiral2':
                 minFontSize = 0.5; // Higher minimum for circles and spirals
                 maxFontSize = 8; // Slightly smaller maximum for better fit
                     break;
@@ -402,35 +420,7 @@
         //     }).join('');
         // }
 
-        // function createSpiralText(text) {
-        //     const chars = text.split('');
-        //     const charCount = chars.length;
-        //     const maxRadius = 45; // Percentage of half the preview size
-        //     const baseAngle = .5; // Base angle increment
-        //     const maxSpaces = 10; // Maximum number of spaces at the start
-        //     const minSpaces = 1; // Minimum number of spaces at the end
-
-        //     return chars.map((char, i) => {
-        //         // Calculate decreasing angle increment
-        //         const angleDecayFactor = 1 - (i / charCount) * 0.05; // Adjust 0.5 to control decay rate
-        //         const angle = i * baseAngle * angleDecayFactor;
-
-        //         // Calculate radius with a slight increase for longer texts
-        //         const radiusFactor = 1 + (charCount / 100); // Adjust divisor to control expansion
-        //         const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
-
-        //         // Calculate decreasing space
-        //         const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
-        //         const spaces = ' '.repeat(Math.max(minSpaces, spaceCount));
-
-        //         const x = 50 + radius * Math.cos(angle);
-        //         const y = 50 + radius * Math.sin(angle);
-
-        //         return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
-        //     }).join('');
-        // }
-
-        function createSpiralText(text) {
+        function createSpiral1Text(text) {
             const chars = text.split('');
             const charCount = chars.length;
             const maxRadius = 45; // Percentage of half the preview size
@@ -446,6 +436,34 @@
                 // Calculate radius with a slight increase for longer texts
                 // const radiusFactor = 1 + (charCount / 25); // Adjust divisor to control expansion
                 const radiusFactor = 1 + charCount/10;
+                const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
+
+                // Calculate decreasing space
+                const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
+                const spaces = ' '.repeat(Math.max(minSpaces, spaceCount));
+
+                const x = 50 + radius * Math.cos(angle);
+                const y = 50 + radius * Math.sin(angle);
+
+                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
+            }).join('');
+        }
+
+        function createSpiral2Text(text) {
+            const chars = text.split('');
+            const charCount = chars.length;
+            const maxRadius = 45; // Percentage of half the preview size
+            const baseAngle = .5; // Base angle increment
+            const maxSpaces = 10; // Maximum number of spaces at the start
+            const minSpaces = 1; // Minimum number of spaces at the end
+
+            return chars.map((char, i) => {
+                // Calculate decreasing angle increment
+                const angleDecayFactor = 1 - (i / charCount) * 0.05; // Adjust 0.5 to control decay rate
+                const angle = i * baseAngle * angleDecayFactor;
+
+                // Calculate radius with a slight increase for longer texts
+                const radiusFactor = 1 + (charCount / 100); // Adjust divisor to control expansion
                 const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
 
                 // Calculate decreasing space
