@@ -88,6 +88,11 @@
             outline: none;
             border-color: #007bff;
         }
+        .triangle-text {
+            text-align: center;
+            display: inline-block;
+            line-height: 1.2;
+        }
         .background-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -301,6 +306,7 @@
                     <select id="shapeSelect-${textBox.id}">
                         <option value="rectangle">Default</option>
                         <option value="circle">Circle</option>
+                        <option value="triangle">Triangle</option>
                         <option value="spiral1">Spiral 1</option>
                         <option value="spiral2">Spiral 2</option>
                     </select>
@@ -365,6 +371,13 @@
                     previewElement.innerHTML = createCircleText(textBox.text);
                     setShapeSize(previewElement, textBox.size);
                     break;
+                case 'triangle':
+                    previewElement.innerHTML = createTriangleText(textBox.text);
+                    previewElement.style.width = 'auto';
+                    previewElement.style.height = 'auto';
+                    previewElement.style.textAlign = 'center';
+                    previewElement.style.whiteSpace = 'pre';
+                    break;
                 case 'spiral1':
                     previewElement.innerHTML = createSpiral1Text(textBox.text);
                     setShapeSize(previewElement, textBox.size);
@@ -390,6 +403,7 @@
 
             switch(textBox.shape) {
                 case 'rectangle':
+                case 'triangle':
                     minFontSize = 0.5;
                     maxFontSize = 24;
                     break;
@@ -403,7 +417,7 @@
 
             const fontSize = minFontSize + (textBox.size / 100) * (maxFontSize - minFontSize);
             
-            if (textBox.shape === 'rectangle') {
+            if (textBox.shape === 'rectangle' || textBox.shape === 'triangle') {
                 element.style.fontSize = `${fontSize}vw`;
             } else {
                 const chars = Array.from(element.children);
@@ -427,131 +441,158 @@
             }).join('');
         }
 
+        function createTriangleText(text) {
+            let lines = [];
+            let currentLine = '';
+            let lineNumber = 0;
+            let maxLineLength = 0;
+            let maxLineChars = 1;  // Start with 1 character for the first line
+
+            for (let char of text) {
+                if (currentLine.length < maxLineChars) {
+                    currentLine += char;
+                } else {
+                    lines.push(currentLine);
+                    maxLineLength = Math.max(maxLineLength, currentLine.length);
+                    currentLine = char;
+                    lineNumber++;
+                    maxLineChars += 2;  // Increase by 2 for each new line
+                }
+            }
+
+            if (currentLine) {
+                lines.push(currentLine);
+                maxLineLength = Math.max(maxLineLength, currentLine.length);
+            }
+
+            return lines.join('\n');
+        }
+
         function createSpiral1Text(text) {
-        const chars = text.split('');
-        const charCount = chars.length;
-        const maxRadius = 45;
-        const baseAngle = .5;
-        const maxSpaces = 10;
-        const minSpaces = 1;
+            const chars = text.split('');
+            const charCount = chars.length;
+            const maxRadius = 45;
+            const baseAngle = .5;
+            const maxSpaces = 10;
+            const minSpaces = 1;
 
-        return chars.map((char, i) => {
-            const angleDecayFactor = 1 - (i / charCount) * 0.05;
-            const angle = i * baseAngle * angleDecayFactor;
-            const radiusFactor = 1 + charCount/10;
-            const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
-            const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
-            const spaces = ' '.repeat(Math.max(minSpaces, Math.floor(spaceCount)));
-            const x = 50 + radius * Math.cos(angle);
-            const y = 50 + radius * Math.sin(angle);
-            return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
-        }).join('');
-    }
-
-    function createSpiral2Text(text) {
-        const chars = text.split('');
-        const charCount = chars.length;
-        const maxRadius = 45;
-        const baseAngle = .5;
-        const maxSpaces = 10;
-        const minSpaces = 1;
-
-        return chars.map((char, i) => {
-            const angleDecayFactor = 1 - (i / charCount) * 0.05;
-            const angle = i * baseAngle * angleDecayFactor;
-            const radiusFactor = 1 + (charCount / 100);
-            const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
-            const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
-            const spaces = ' '.repeat(Math.max(minSpaces, Math.floor(spaceCount)));
-            const x = 50 + radius * Math.cos(angle);
-            const y = 50 + radius * Math.sin(angle);
-            return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
-        }).join('');
-    }
-
-    function startDragging(e, textBox) {
-        const previewElement = document.getElementById(`preview-${textBox.id}`);
-        const rect = preview.getBoundingClientRect();
-        const startX = e.clientX - rect.left;
-        const startY = e.clientY - rect.top;
-        const startLeft = textBox.position.left;
-        const startTop = textBox.position.top;
-
-        function drag(e) {
-            const newX = e.clientX - rect.left;
-            const newY = e.clientY - rect.top;
-            const deltaX = newX - startX;
-            const deltaY = newY - startY;
-
-            textBox.position.left = Math.max(0, Math.min(100, startLeft + (deltaX / rect.width) * 100));
-            textBox.position.top = Math.max(0, Math.min(100, startTop + (deltaY / rect.height) * 100));
-
-            updateTextBox(textBox);
+            return chars.map((char, i) => {
+                const angleDecayFactor = 1 - (i / charCount) * 0.05;
+                const angle = i * baseAngle * angleDecayFactor;
+                const radiusFactor = 1 + charCount/10;
+                const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
+                const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
+                const spaces = ' '.repeat(Math.max(minSpaces, Math.floor(spaceCount)));
+                const x = 50 + radius * Math.cos(angle);
+                const y = 50 + radius * Math.sin(angle);
+                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
+            }).join('');
         }
 
-        function stopDragging() {
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', stopDragging);
-            preview.style.cursor = 'default';
+        function createSpiral2Text(text) {
+            const chars = text.split('');
+            const charCount = chars.length;
+            const maxRadius = 45;
+            const baseAngle = .5;
+            const maxSpaces = 10;
+            const minSpaces = 1;
+
+            return chars.map((char, i) => {
+                const angleDecayFactor = 1 - (i / charCount) * 0.05;
+                const angle = i * baseAngle * angleDecayFactor;
+                const radiusFactor = 1 + (charCount / 100);
+                const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
+                const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
+                const spaces = ' '.repeat(Math.max(minSpaces, Math.floor(spaceCount)));
+                const x = 50 + radius * Math.cos(angle);
+                const y = 50 + radius * Math.sin(angle);
+                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
+            }).join('');
         }
 
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('mouseup', stopDragging);
-        preview.style.cursor = 'grabbing';
-    }
+        function startDragging(e, textBox) {
+            const previewElement = document.getElementById(`preview-${textBox.id}`);
+            const rect = preview.getBoundingClientRect();
+            const startX = e.clientX - rect.left;
+            const startY = e.clientY - rect.top;
+            const startLeft = textBox.position.left;
+            const startTop = textBox.position.top;
 
-    function updateAllTextBoxes() {
-        textBoxes.forEach(updateTextBox);
-    }
+            function drag(e) {
+                const newX = e.clientX - rect.left;
+                const newY = e.clientY - rect.top;
+                const deltaX = newX - startX;
+                const deltaY = newY - startY;
 
-    function preloadImages() {
-        backgroundOptions.forEach(option => {
-            const imageUrl = option.getAttribute('data-image');
-            const img = new Image();
-            img.src = imageUrl;
-            imageCache.set(imageUrl, img);
-            option.style.backgroundImage = `url('${imageUrl}')`;
-        });
-    }
+                textBox.position.left = Math.max(0, Math.min(100, startLeft + (deltaX / rect.width) * 100));
+                textBox.position.top = Math.max(0, Math.min(100, startTop + (deltaY / rect.height) * 100));
 
-    function setBackgroundImage(imageUrl) {
-        currentBackgroundImage = `url('${imageUrl}')`;
-        preview.style.backgroundImage = currentBackgroundImage;
-        adjustTextColors();
-    }
-
-    function adjustTextColors() {
-        const computedStyle = window.getComputedStyle(preview);
-        const bgImage = computedStyle.backgroundImage;
-        
-        if (bgImage && bgImage !== 'none') {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0, img.width, img.height);
-                
-                const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
-                const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
-                
-                const newColor = brightness > 128 ? 'black' : 'white';
-                textBoxes.forEach(textBox => {
-                    textBox.color = newColor;
-                    updateTextBox(textBox);
-                });
-            };
-            img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
-        } else {
-            textBoxes.forEach(textBox => {
-                textBox.color = 'black';
                 updateTextBox(textBox);
+            }
+
+            function stopDragging() {
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', stopDragging);
+                preview.style.cursor = 'default';
+            }
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDragging);
+            preview.style.cursor = 'grabbing';
+        }
+
+        function updateAllTextBoxes() {
+            textBoxes.forEach(updateTextBox);
+        }
+
+        function preloadImages() {
+            backgroundOptions.forEach(option => {
+                const imageUrl = option.getAttribute('data-image');
+                const img = new Image();
+                img.src = imageUrl;
+                imageCache.set(imageUrl, img);
+                option.style.backgroundImage = `url('${imageUrl}')`;
             });
         }
-    }
 
-    function showRemoveLightbox(textBox) {
+        function setBackgroundImage(imageUrl) {
+            currentBackgroundImage = `url('${imageUrl}')`;
+            preview.style.backgroundImage = currentBackgroundImage;
+            adjustTextColors();
+        }
+
+        function adjustTextColors() {
+            const computedStyle = window.getComputedStyle(preview);
+            const bgImage = computedStyle.backgroundImage;
+            
+            if (bgImage && bgImage !== 'none') {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0, img.width, img.height);
+                    
+                    const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
+                    const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
+                    
+                    const newColor = brightness > 128 ? 'black' : 'white';
+                    textBoxes.forEach(textBox => {
+                        textBox.color = newColor;
+                        updateTextBox(textBox);
+                    });
+                };
+                img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
+            } else {
+                textBoxes.forEach(textBox => {
+                    textBox.color = 'black';
+                    updateTextBox(textBox);
+                });
+            }
+        }
+
+        function showRemoveLightbox(textBox) {
             textBoxToRemove = textBox;
             removeLightbox.style.display = 'block';
         }
