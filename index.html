@@ -88,6 +88,26 @@
             outline: none;
             border-color: #007bff;
         }
+        .shape-options-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .shape-select-container, .format-options-container {
+            width: 48%;
+        }
+        #shapeSelect, #formatOptions {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+        #shapeSelect:focus, #formatOptions:focus {
+            outline: none;
+            border-color: #007bff;
+        }
         .triangle-text {
             text-align: center;
             display: inline-block;
@@ -284,6 +304,7 @@
                 id: id,
                 text: '',
                 shape: 'rectangle',
+                formatOption: 'default',
                 size: 50,
                 rotation: 0,
                 position: { left: 50, top: 50 },
@@ -302,14 +323,22 @@
             container.innerHTML = `
                 <button class="remove-text-box" data-id="${textBox.id}">×</button>
                 <textarea id="textInput-${textBox.id}" placeholder="Type here..."></textarea>
-                <div class="shape-select-container">
-                    <select id="shapeSelect-${textBox.id}">
-                        <option value="rectangle">Default</option>
-                        <option value="circle">Circle</option>
-                        <option value="triangle">Triangle</option>
-                        <option value="spiral1">Spiral 1</option>
-                        <option value="spiral2">Spiral 2</option>
-                    </select>
+                <div class="shape-options-container">
+                    <div class="shape-select-container">
+                        <select id="shapeSelect-${textBox.id}">
+                            <option value="rectangle">Default</option>
+                            <option value="circle">Circle</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="spiral1">Spiral 1</option>
+                            <option value="spiral2">Spiral 2</option>
+                            <option value="gate">Gate</option>
+                        </select>
+                    </div>
+                    <div class="format-options-container">
+                        <select id="formatOptions-${textBox.id}">
+                            <option value="default">Default</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="slider-container">
                     <input type="range" id="sizeSlider-${textBox.id}" class="size-slider" min="5" max="100" value="50">
@@ -322,13 +351,69 @@
 
             // Add event listeners
             document.getElementById(`textInput-${textBox.id}`).addEventListener('input', () => updateTextBox(textBox));
-            document.getElementById(`shapeSelect-${textBox.id}`).addEventListener('change', () => updateTextBox(textBox));
+            document.getElementById(`shapeSelect-${textBox.id}`).addEventListener('change', (e) => {
+                textBox.shape = e.target.value;
+                updateFormatOptions(textBox);
+                updateTextBox(textBox);
+            });
+            document.getElementById(`formatOptions-${textBox.id}`).addEventListener('change', (e) => {
+                textBox.formatOption = e.target.value;
+                updateTextBox(textBox);
+            });
             document.getElementById(`sizeSlider-${textBox.id}`).addEventListener('input', () => updateTextBox(textBox));
             document.getElementById(`rotationDial-${textBox.id}`).addEventListener('input', () => updateTextBox(textBox));
             
             // Add event listener for remove button
             const removeButton = container.querySelector('.remove-text-box');
             removeButton.addEventListener('click', () => showRemoveLightbox(textBox));
+
+            updateFormatOptions(textBox);
+        }
+
+        function updateFormatOptions(textBox) {
+            const formatOptionsSelect = document.getElementById(`formatOptions-${textBox.id}`);
+            formatOptionsSelect.innerHTML = ''; // Clear existing options
+
+            let options;
+            switch (textBox.shape) {
+                case 'triangle':
+                    options = [
+                        { value: 'skinny', text: 'Skinny' },
+                        { value: 'medium', text: 'Medium' },
+                        { value: 'fat', text: 'Fat' }
+                    ];
+                    break;
+                case 'circle':
+                    options = [
+                        { value: 'circumference', text: 'Circumference' },
+                        { value: 'area', text: 'Area' }
+                    ];
+                    break;
+                case 'spiral1':
+                case 'spiral2':
+                    options = [
+                        { value: 'compact', text: 'Compact' },
+                        { value: 'normal', text: 'Normal' },
+                        { value: 'expanded', text: 'Expanded' }
+                    ];
+                    break;
+                case 'gate':
+                    options = [
+                        { value: 'default', text: 'Default' }
+                    ];
+                    break;
+                default:
+                    options = [{ value: 'default', text: 'Default' }];
+            }
+
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.value;
+                optionElement.textContent = option.text;
+                formatOptionsSelect.appendChild(optionElement);
+            });
+
+            textBox.formatOption = options[0].value; // Set default option
         }
 
         function createTextBoxPreview(textBox) {
@@ -345,11 +430,13 @@
             const previewElement = document.getElementById(`preview-${textBox.id}`);
             const textInput = document.getElementById(`textInput-${textBox.id}`);
             const shapeSelect = document.getElementById(`shapeSelect-${textBox.id}`);
+            const formatOptionsSelect = document.getElementById(`formatOptions-${textBox.id}`);
             const sizeSlider = document.getElementById(`sizeSlider-${textBox.id}`);
             const rotationDial = document.getElementById(`rotationDial-${textBox.id}`);
 
             textBox.text = textInput.value;
             textBox.shape = shapeSelect.value;
+            textBox.formatOption = formatOptionsSelect.value;
             textBox.size = parseInt(sizeSlider.value);
             textBox.rotation = parseInt(rotationDial.value);
 
@@ -368,23 +455,33 @@
                     previewElement.style.alignItems = 'center';
                     break;
                 case 'circle':
-                    previewElement.innerHTML = createCircleText(textBox.text);
-                    setShapeSize(previewElement, textBox.size);
+                    previewElement.innerHTML = createCircleText(textBox.text, textBox.formatOption);
+                    if (textBox.formatOption === 'area') {
+                        previewElement.style.width = 'auto';
+                        previewElement.style.height = 'auto';
+                    } else {
+                        setShapeSize(previewElement, textBox.size);
+                    }
                     break;
                 case 'triangle':
-                    previewElement.innerHTML = createTriangleText(textBox.text);
+                    previewElement.innerHTML = createTriangleText(textBox.text, textBox.formatOption);
                     previewElement.style.width = 'auto';
                     previewElement.style.height = 'auto';
                     previewElement.style.textAlign = 'center';
                     previewElement.style.whiteSpace = 'pre';
                     break;
                 case 'spiral1':
-                    previewElement.innerHTML = createSpiral1Text(textBox.text);
+                    previewElement.innerHTML = createSpiral1Text(textBox.text, textBox.formatOption);
                     setShapeSize(previewElement, textBox.size);
                     break;
                 case 'spiral2':
-                    previewElement.innerHTML = createSpiral2Text(textBox.text);
+                    previewElement.innerHTML = createSpiral2Text(textBox.text, textBox.formatOption);
                     setShapeSize(previewElement, textBox.size);
+                    break;
+                case 'gate':
+                    previewElement.innerHTML = createGateText(textBox.text);
+                    previewElement.style.width = 'auto';
+                    previewElement.style.height = 'auto';
                     break;
             }
 
@@ -408,16 +505,28 @@
                     maxFontSize = 24;
                     break;
                 case 'circle':
+                    if (textBox.formatOption === 'area') {
+                        minFontSize = 0.5;
+                        maxFontSize = 3;
+                    } else {
+                        minFontSize = 0.5;
+                        maxFontSize = 16;
+                    }
+                    break;
                 case 'spiral1':
                 case 'spiral2':
                     minFontSize = 0.5;
                     maxFontSize = 16;
                     break;
+                case 'gate':
+                    minFontSize = 0.5;
+                    maxFontSize = 2;
+                    break;
             }
 
             const fontSize = minFontSize + (textBox.size / 100) * (maxFontSize - minFontSize);
             
-            if (textBox.shape === 'rectangle' || textBox.shape === 'triangle') {
+            if (textBox.shape === 'rectangle' || textBox.shape === 'triangle' || textBox.shape === 'gate' || (textBox.shape === 'circle' && textBox.formatOption === 'area')) {
                 element.style.fontSize = `${fontSize}vw`;
             } else {
                 const chars = Array.from(element.children);
@@ -427,7 +536,15 @@
             }
         }
 
-        function createCircleText(text) {
+        function createCircleText(text, formatOption) {
+            if (formatOption === 'circumference') {
+                return createCircumferenceText(text);
+            } else {
+                return createCircleAreaText(text);
+            }
+        }
+
+        function createCircumferenceText(text) {
             const chars = text.split('');
             const charCount = chars.length;
             const baseRadius = 45;
@@ -441,12 +558,86 @@
             }).join('');
         }
 
-        function createTriangleText(text) {
+        function createCircleAreaText(text) {
+            const chars = text.split('');
+            const charCount = chars.length;
+            
+            // Estimate initial height based on character count
+            let height = Math.ceil(Math.sqrt(charCount / (Math.PI * 1.5))); // Adjust for 1.5 aspect ratio
+            let width = Math.floor(height * 1.5);
+            let result = '';
+            let usedChars = 0;
+
+            // Adjust size until all characters are used or we can't fit more
+            while (usedChars < charCount) {
+                result = '';
+                usedChars = 0;
+                const verticalRadius = Math.floor(height / 2);
+                const horizontalRadius = Math.floor(width / 2);
+
+                for (let y = -verticalRadius; y <= verticalRadius; y++) {
+                    let line = '';
+                    // Use a quadratic function to create a more circular shape
+                    const lineWidth = Math.round(width * (1 - Math.pow(y / verticalRadius, 2)));
+
+                    // Calculate left padding for centering
+                    const leftPadding = Math.floor((width - lineWidth) / 2);
+                    
+                    // Add characters to the line
+                    for (let x = 0; x < lineWidth; x++) {
+                        if (usedChars < charCount) {
+                            line += chars[usedChars++];
+                        } else {
+                            break;
+                        }
+                    }
+
+                    if (line.length > 0) {
+                        // Center the text within the line
+                        const rightPadding = width - leftPadding - line.length;
+                        result += `<div style="white-space: pre;">${'&nbsp;'.repeat(leftPadding)}${line}${'&nbsp;'.repeat(rightPadding)}</div>`;
+                    } else {
+                        result += `<div style="white-space: pre;">${'&nbsp;'.repeat(width)}</div>`;
+                    }
+                }
+
+                if (usedChars < charCount) {
+                    height += 1;
+                    width = Math.floor(height * 1.5);
+                } else {
+                    break; // All characters used, we're done
+                }
+            }
+
+            return `<div style="display: inline-block; line-height: 1; text-align: center; font-family: p1a;">${result}</div>`;
+        }
+
+        function getMaxCharsForLine(lineNumber, baseRadius) {
+            // This function calculates the maximum number of characters that can fit on each line
+            // to approximate a circular shape. You may need to adjust this formula for better results.
+            const maxLineLength = Math.floor(baseRadius * 2);
+            const middleLine = Math.ceil(baseRadius);
+            const distanceFromMiddle = Math.abs(lineNumber - middleLine);
+            return Math.floor(Math.sqrt(maxLineLength * maxLineLength - distanceFromMiddle * distanceFromMiddle));
+        }
+
+        function createTriangleText(text, formatOption) {
             let lines = [];
             let currentLine = '';
             let lineNumber = 0;
             let maxLineLength = 0;
             let maxLineChars = 1;  // Start with 1 character for the first line
+
+            const getIncrement = () => {
+                switch (formatOption) {
+                    case 'skinny': return 1;
+                    case 'medium': return 3;
+                    case 'fat': return 5;
+                    default: return 3;
+                }
+            };
+
+            const increment = getIncrement();
 
             for (let char of text) {
                 if (currentLine.length < maxLineChars) {
@@ -456,7 +647,7 @@
                     maxLineLength = Math.max(maxLineLength, currentLine.length);
                     currentLine = char;
                     lineNumber++;
-                    maxLineChars += 2;  // Increase by 2 for each new line
+                    maxLineChars += increment;
                 }
             }
 
@@ -465,14 +656,28 @@
                 maxLineLength = Math.max(maxLineLength, currentLine.length);
             }
 
+            // Center-align each line
+            lines = lines.map(line => {
+                const padding = maxLineLength - line.length;
+                const leftPad = Math.floor(padding / 2);
+                const rightPad = padding - leftPad;
+                return ' '.repeat(leftPad) + line + ' '.repeat(rightPad);
+            });
+
             return lines.join('\n');
         }
 
-        function createSpiral1Text(text) {
+        function createSpiral1Text(text, formatOption) {
             const chars = text.split('');
             const charCount = chars.length;
-            const maxRadius = 45;
-            const baseAngle = .5;
+            let maxRadius, baseAngle;
+
+            switch (formatOption) {
+                case 'compact': maxRadius = 40; baseAngle = 0.4; break;
+                case 'expanded': maxRadius = 50; baseAngle = 0.6; break;
+                default: maxRadius = 45; baseAngle = 0.5;
+            }
+
             const maxSpaces = 10;
             const minSpaces = 1;
 
@@ -489,18 +694,24 @@
             }).join('');
         }
 
-        function createSpiral2Text(text) {
+        function createSpiral2Text(text, formatOption) {
             const chars = text.split('');
             const charCount = chars.length;
-            const maxRadius = 45;
-            const baseAngle = .5;
+            let maxRadius, baseAngle;
+
+            switch (formatOption) {
+                case 'compact': maxRadius = 40; baseAngle = 0.4; break;
+                case 'expanded': maxRadius = 50; baseAngle = 0.6; break;
+                default: maxRadius = 45; baseAngle = 0.5;
+            }
+
             const maxSpaces = 10;
             const minSpaces = 1;
 
             return chars.map((char, i) => {
                 const angleDecayFactor = 1 - (i / charCount) * 0.05;
                 const angle = i * baseAngle * angleDecayFactor;
-                const radiusFactor = 1 + (charCount / 100);
+                const radiusFactor = 1 + charCount/100;
                 const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
                 const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
                 const spaces = ' '.repeat(Math.max(minSpaces, Math.floor(spaceCount)));
@@ -508,6 +719,33 @@
                 const y = 50 + radius * Math.sin(angle);
                 return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
             }).join('');
+        }
+
+        function createGateText(text) {
+            const chars = text.split('');
+            const baseRadius = 45; // Adjust this value to change the size of the gate
+            let result = '';
+
+            for (let y = -baseRadius; y <= baseRadius; y++) {
+                let line = '';
+                for (let x = -baseRadius; x <= baseRadius; x++) {
+                    const distance = Math.sqrt(x * x + y * y);
+                    if (distance < baseRadius && distance > baseRadius - 3) {
+                        if (chars.length > 0) {
+                            line += chars.shift();
+                        } else {
+                            line += ' ';
+                        }
+                    } else if (distance <= baseRadius - 3) {
+                        line += ' ';
+                    }
+                }
+                if (line.trim().length > 0) {
+                    result += `<div style="white-space: pre; text-align: center;">${line}</div>`;
+                }
+            }
+
+            return `<div style="display: inline-block; line-height: 1;">${result}</div>`;
         }
 
         function startDragging(e, textBox) {
