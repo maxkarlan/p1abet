@@ -164,10 +164,30 @@
             border-radius: 5px;
             position: relative;
         }
+        .text-box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .visibility-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin-right: 10px;
+            width: 24px;
+            height: 24px;
+        }
+        .visibility-toggle img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
         .remove-text-box {
             position: absolute;
-            top: 5px;
-            right: 5px;
+            top: 10px;
+            right: 10px;
             background-color: #ff4d4d;
             color: white;
             border: none;
@@ -180,6 +200,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        .text-box-content {
+            display: flex;
+            flex-direction: column;
+        }
+        .text-box-content textarea {
+            width: 100%;
+            margin-bottom: 10px;
         }
         .remove-text-box:hover {
             background-color: #ff1a1a;
@@ -321,30 +349,37 @@
             container.className = 'text-box-settings';
             container.id = `settings-${textBox.id}`;
             container.innerHTML = `
-                <button class="remove-text-box" data-id="${textBox.id}">×</button>
-                <textarea id="textInput-${textBox.id}" placeholder="Type here..."></textarea>
-                <div class="shape-options-container">
-                    <div class="shape-select-container">
-                        <select id="shapeSelect-${textBox.id}">
-                            <option value="rectangle">Default</option>
-                            <option value="circle">Circle</option>
-                            <option value="triangle">Triangle</option>
-                            <option value="spiral1">Spiral 1</option>
-                            <option value="spiral2">Spiral 2</option>
-                            <option value="gate">Gate</option>
-                        </select>
-                    </div>
-                    <div class="format-options-container">
-                        <select id="formatOptions-${textBox.id}">
-                            <option value="default">Default</option>
-                        </select>
-                    </div>
+                <div class="text-box-header">
+                    <button class="visibility-toggle" data-id="${textBox.id}">
+                        <img src="images/visible.png" alt="Visibility toggle">
+                    </button>
+                    <button class="remove-text-box" data-id="${textBox.id}">×</button>
                 </div>
-                <div class="slider-container">
-                    <input type="range" id="sizeSlider-${textBox.id}" class="size-slider" min="5" max="100" value="50">
-                </div>
-                <div class="slider-container">
-                    <input type="range" id="rotationDial-${textBox.id}" class="rotation-dial" min="0" max="359" value="0">
+                <div class="text-box-content">
+                    <textarea id="textInput-${textBox.id}" placeholder="Type here..."></textarea>
+                    <div class="shape-options-container">
+                        <div class="shape-select-container">
+                            <select id="shapeSelect-${textBox.id}">
+                                <option value="rectangle">Default</option>
+                                <option value="circle">Circle</option>
+                                <option value="triangle">Triangle</option>
+                                <option value="spiral1">Spiral 1</option>
+                                <option value="spiral2">Spiral 2</option>
+                                <option value="gate">Gate</option>
+                            </select>
+                        </div>
+                        <div class="format-options-container">
+                            <select id="formatOptions-${textBox.id}">
+                                <option value="default">Default</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="sizeSlider-${textBox.id}" class="size-slider" min="5" max="100" value="50">
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="rotationDial-${textBox.id}" class="rotation-dial" min="0" max="359" value="0">
+                    </div>
                 </div>
             `;
             textBoxesContainer.appendChild(container);
@@ -367,7 +402,26 @@
             const removeButton = container.querySelector('.remove-text-box');
             removeButton.addEventListener('click', () => showRemoveLightbox(textBox));
 
+            // Add event listener for visibility toggle
+            const visibilityToggle = container.querySelector('.visibility-toggle');
+            visibilityToggle.addEventListener('click', () => toggleTextBoxVisibility(textBox));
+
             updateFormatOptions(textBox);
+        }
+
+        function toggleTextBoxVisibility(textBox) {
+            const previewElement = document.getElementById(`preview-${textBox.id}`);
+            const visibilityToggle = document.querySelector(`.visibility-toggle[data-id="${textBox.id}"] img`);
+            
+            if (previewElement.style.display === 'none') {
+                previewElement.style.display = '';
+                visibilityToggle.src = 'images/visible.png';
+                visibilityToggle.alt = 'Visible';
+            } else {
+                previewElement.style.display = 'none';
+                visibilityToggle.src = 'images/invisible.png';
+                visibilityToggle.alt = 'Invisible';
+            }
         }
 
         function updateFormatOptions(textBox) {
@@ -723,7 +777,7 @@
 
         function createGateText(text) {
             const chars = text.split('');
-            const baseRadius = 45; // Adjust this value to change the size of the gate
+            const baseRadius = 25; // Adjust this value to change the size of the gate
             let result = '';
 
             for (let y = -baseRadius; y <= baseRadius; y++) {
