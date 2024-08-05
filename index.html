@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Font Preview</title>
+    <title>Custom Font Preview with Multiple Text Boxes</title>
     <style>
         @font-face {
             font-family: 'CustomFont';
@@ -25,7 +25,7 @@
         }
 
         .input-column, .settings-column {
-            width: 25%; /* Increased from 20% to give more space for inputs */
+            width: 25%;
             padding: 20px;
             background-color: white;
             box-shadow: 0 0 5px rgba(0,0,0,0.1);
@@ -59,7 +59,7 @@
             background-size: cover;
             background-position: center;
         }
-        #previewText {
+        .preview-text {
             position: absolute;
             cursor: move;
             user-select: none;
@@ -88,12 +88,6 @@
             outline: none;
             border-color: #007bff;
         }
-        .preview-text-container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            cursor: move;
-        }
         .background-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -119,54 +113,104 @@
         .slider-container {
             margin-top: 15px;
         }
-        #sizeSlider {
+        .size-slider, .rotation-dial {
             width: 100%;
         }
-        .slider-container {
-            margin-top: 15px;
+        .text-box-controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
         }
-        #sizeSlider, #rotationDial {
+        .text-box-controls button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .text-box-controls button:hover {
+            background-color: #0056b3;
+        }
+        .text-box-settings {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            position: relative;
+        }
+        .remove-text-box {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .remove-text-box:hover {
+            background-color: #ff1a1a;
+        }
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
             width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .lightbox-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 300px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .lightbox-buttons {
+            margin-top: 20px;
+        }
+        .lightbox-buttons button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .confirm-remove {
+            background-color: #ff4d4d;
+            color: white;
+        }
+        .cancel-remove {
+            background-color: #ddd;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="input-column">
-            <h2 class="card-title">Input Text</h2>
-            <div class="input-group">
-                <label for="textInput">Enter your text:</label>
-                <textarea id="textInput" placeholder="Type here..."></textarea>
-            </div>
-            
-            <div class="shape-select-container">
-                <label for="shapeSelect">Text Shape:</label>
-                <select id="shapeSelect">
-                    <option value="rectangle">Default</option>
-                    <option value="circle">Circle</option>
-                    <option value="spiral1">Spiral 1</option>
-                    <option value="spiral2">Spiral 2</option>
-                </select>
-            </div>
-            
-            <div class="slider-container">
-                <label for="sizeSlider">Text Size:</label>
-                <input type="range" id="sizeSlider" min="5" max="100" value="50">
-            </div>
-            <div class="slider-container">
-                <label for="rotationDial">Text Rotation:</label>
-                <input type="range" id="rotationDial" min="0" max="359" value="0">
+            <h2 class="card-title">Text Boxes</h2>
+            <div id="textBoxes"></div>
+            <div class="text-box-controls">
+                <button id="addTextBox">Add Text Box</button>
             </div>
         </div>
     
         <div class="preview-column">
             <h2 class="card-title">Custom Font Preview</h2>
             <div class="preview-wrapper">
-                <div id="preview" class="preview">
-                    <div id="previewTextContainer" class="preview-text-container">
-                        <div id="previewText"></div>
-                    </div>
-                </div>
+                <div id="preview" class="preview"></div>
             </div>
             <div id="fontStatus"></div>
         </div>
@@ -190,205 +234,190 @@
         </div>
     </div>
 
-    <script>
-        let currentShape = 'rectangle';
-        let currentBackgroundImage = '';
-        const imageCache = new Map();
+    <div id="removeLightbox" class="lightbox">
+        <div class="lightbox-content">
+            <p>Are you sure you want to remove this text box?</p>
+            <div class="lightbox-buttons">
+                <button class="confirm-remove">Confirm</button>
+                <button class="cancel-remove">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-        const textInput = document.getElementById('textInput');
+    <script>
+         let currentBackgroundImage = '';
+        const imageCache = new Map();
+        let textBoxes = [];
+
         const preview = document.getElementById('preview');
-        const previewTextContainer = document.getElementById('previewTextContainer');
-        const previewText = document.getElementById('previewText');
-        const shapeButtons = document.querySelectorAll('.shape-button');
         const backgroundOptions = document.querySelectorAll('.background-option');
+        const addTextBoxButton = document.getElementById('addTextBox');
+        const textBoxesContainer = document.getElementById('textBoxes');
+        const removeLightbox = document.getElementById('removeLightbox');
+        let textBoxToRemove = null;
 
         function loadCustomFont() {
             const font = new FontFace('CustomFont', 'url(p1a.ttf)');
-            const preview = document.getElementById('preview');
             const fontStatus = document.getElementById('fontStatus');
 
             font.load().then(function(loadedFont) {
                 document.fonts.add(loadedFont);
                 preview.style.fontFamily = 'CustomFont, sans-serif';
                 fontStatus.textContent = 'Custom font loaded successfully!';
-                updatePreviewText();
-                adjustFontSize();
+                updateAllTextBoxes();
             }).catch(function(error) {
                 console.error('Error loading font:', error);
                 fontStatus.textContent = 'Failed to load custom font: ' + error.message + '. Using default font.';
                 preview.style.fontFamily = 'sans-serif';
-                updatePreviewText();
-                adjustFontSize();
+                updateAllTextBoxes();
             });
         }
 
-        let currentFontSize = 50; // Default size (middle of the slider)
-        let currentFontColor = 'black'; // Default font color
-        const sizeSlider = document.getElementById('sizeSlider');
-        let currentRotation = 0;
-        const rotationDial = document.getElementById('rotationDial');
-        let textPosition = { left: 50, top: 50 }; // Initialize to center of preview
-        // let isDragging = false;
-        let startX, startY;
-
-        function updatePreviewText() {
-            const text = textInput.value;
-            
-            // // Store the current center position as percentages
-            // const currentCenterX = (textPosition.left + previewText.offsetWidth / 2) / preview.offsetWidth * 100;
-            // const currentCenterY = (textPosition.top + previewText.offsetHeight / 2) / preview.offsetHeight * 100;
-            
-            previewText.style = '';
-            // Update text position
-            previewText.style.left = `${textPosition.left}%`;
-            previewText.style.top = `${textPosition.top}%`;
-            previewText.style.cursor = 'move';
-            previewText.style.userSelect = 'none';
-            previewText.style.color = currentFontColor;
-            previewText.style.transform = `translate(-50%, -50%) rotate(${currentRotation}deg)`;
-            // previewText.style.transformOrigin = 'center center';
-            
-            switch(currentShape) {
-                case 'rectangle':
-                    previewText.innerHTML = text || '&nbsp;';
-                    previewText.style.width = 'auto';
-                    previewText.style.height = 'auto';
-                    previewText.style.maxWidth = 'none'; // Remove max-width constraint
-                    previewText.style.maxHeight = 'none'; // Remove max-height constraint
-                    previewText.style.display = 'flex';
-                    previewText.style.justifyContent = 'center';
-                    previewText.style.alignItems = 'center';
-                    break;
-                case 'circle':
-                case 'spiral1':
-                case 'spiral2':
-                    const size = currentFontSize + '%';
-                    previewText.style.width = size;
-                    previewText.style.height = size;
-                    if (currentShape === 'circle') {
-                        previewText.innerHTML = createCircleText(text);
-                    } else if (currentShape === 'spiral1') {
-                        previewText.innerHTML = createSpiral1Text(text);
-                    } else {
-                        previewText.innerHTML = createSpiral2Text(text);
-                    }
-                    Array.from(previewText.children).forEach(span => {
-                        span.style.color = currentFontColor;
-                    });
-                    break;
-            }
-
-            if (currentShape !== 'rectangle') {
-                const size = currentFontSize + '%';
-                previewText.style.width = size;
-                previewText.style.height = size;
-                Array.from(previewText.children).forEach(span => {
-                    span.style.color = currentFontColor;
-                });
-            }
-            
-            adjustFontSize();
-            
-            // Position the text using percentages
-            previewText.style.left = `${textPosition.left}%`;
-            previewText.style.top = `${textPosition.top}%`;
+        function createTextBox() {
+            const id = Date.now().toString();
+            const textBox = {
+                id: id,
+                text: '',
+                shape: 'rectangle',
+                size: 50,
+                rotation: 0,
+                position: { left: 50, top: 50 },
+                color: 'black'
+            };
+            textBoxes.push(textBox);
+            createTextBoxUI(textBox);
+            createTextBoxPreview(textBox);
+            updateTextBox(textBox);
         }
 
-        
-        rotationDial.addEventListener('input', function() {
-            currentRotation = parseInt(this.value);
-            updatePreviewText();
-        });
+        function createTextBoxUI(textBox) {
+            const container = document.createElement('div');
+            container.className = 'text-box-settings';
+            container.id = `settings-${textBox.id}`;
+            container.innerHTML = `
+                <button class="remove-text-box" data-id="${textBox.id}">×</button>
+                <textarea id="textInput-${textBox.id}" placeholder="Type here..."></textarea>
+                <div class="shape-select-container">
+                    <select id="shapeSelect-${textBox.id}">
+                        <option value="rectangle">Default</option>
+                        <option value="circle">Circle</option>
+                        <option value="spiral1">Spiral 1</option>
+                        <option value="spiral2">Spiral 2</option>
+                    </select>
+                </div>
+                <div class="slider-container">
+                    <input type="range" id="sizeSlider-${textBox.id}" class="size-slider" min="5" max="100" value="50">
+                </div>
+                <div class="slider-container">
+                    <input type="range" id="rotationDial-${textBox.id}" class="rotation-dial" min="0" max="359" value="0">
+                </div>
+            `;
+            textBoxesContainer.appendChild(container);
 
+            // Add event listeners
+            document.getElementById(`textInput-${textBox.id}`).addEventListener('input', () => updateTextBox(textBox));
+            document.getElementById(`shapeSelect-${textBox.id}`).addEventListener('change', () => updateTextBox(textBox));
+            document.getElementById(`sizeSlider-${textBox.id}`).addEventListener('input', () => updateTextBox(textBox));
+            document.getElementById(`rotationDial-${textBox.id}`).addEventListener('input', () => updateTextBox(textBox));
+            
+            // Add event listener for remove button
+            const removeButton = container.querySelector('.remove-text-box');
+            removeButton.addEventListener('click', () => showRemoveLightbox(textBox));
+        }
 
-        function adjustFontSize() {
+        function createTextBoxPreview(textBox) {
+            const previewElement = document.createElement('div');
+            previewElement.id = `preview-${textBox.id}`;
+            previewElement.className = 'preview-text';
+            preview.appendChild(previewElement);
+
+            // Add drag functionality
+            previewElement.addEventListener('mousedown', (e) => startDragging(e, textBox));
+        }
+
+        function updateTextBox(textBox) {
+            const previewElement = document.getElementById(`preview-${textBox.id}`);
+            const textInput = document.getElementById(`textInput-${textBox.id}`);
+            const shapeSelect = document.getElementById(`shapeSelect-${textBox.id}`);
+            const sizeSlider = document.getElementById(`sizeSlider-${textBox.id}`);
+            const rotationDial = document.getElementById(`rotationDial-${textBox.id}`);
+
+            textBox.text = textInput.value;
+            textBox.shape = shapeSelect.value;
+            textBox.size = parseInt(sizeSlider.value);
+            textBox.rotation = parseInt(rotationDial.value);
+
+            previewElement.style.left = `${textBox.position.left}%`;
+            previewElement.style.top = `${textBox.position.top}%`;
+            previewElement.style.color = textBox.color;
+            previewElement.style.transform = `translate(-50%, -50%) rotate(${textBox.rotation}deg)`;
+
+            switch(textBox.shape) {
+                case 'rectangle':
+                    previewElement.innerHTML = textBox.text || '&nbsp;';
+                    previewElement.style.width = 'auto';
+                    previewElement.style.height = 'auto';
+                    previewElement.style.display = 'flex';
+                    previewElement.style.justifyContent = 'center';
+                    previewElement.style.alignItems = 'center';
+                    break;
+                case 'circle':
+                    previewElement.innerHTML = createCircleText(textBox.text);
+                    setShapeSize(previewElement, textBox.size);
+                    break;
+                case 'spiral1':
+                    previewElement.innerHTML = createSpiral1Text(textBox.text);
+                    setShapeSize(previewElement, textBox.size);
+                    break;
+                case 'spiral2':
+                    previewElement.innerHTML = createSpiral2Text(textBox.text);
+                    setShapeSize(previewElement, textBox.size);
+                    break;
+            }
+
+            adjustFontSize(previewElement, textBox);
+        }
+
+        function setShapeSize(element, size) {
+            const sizeValue = `${size}%`;
+            element.style.width = sizeValue;
+            element.style.height = sizeValue;
+        }
+
+        function adjustFontSize(element, textBox) {
             const previewSize = Math.min(preview.clientWidth, preview.clientHeight);
             let minFontSize, maxFontSize;
 
-            switch(currentShape) {
+            switch(textBox.shape) {
                 case 'rectangle':
-                minFontSize = 0.5; // Lower minimum for rectangles
-                maxFontSize = 24; // Maximum font size in vw units
+                    minFontSize = 0.5;
+                    maxFontSize = 24;
                     break;
                 case 'circle':
                 case 'spiral1':
                 case 'spiral2':
-                minFontSize = 0.5; // Higher minimum for circles and spirals
-                maxFontSize = 16; // Slightly smaller maximum for better fit
+                    minFontSize = 0.5;
+                    maxFontSize = 16;
                     break;
             }
 
-            const fontSize = minFontSize + (currentFontSize / 100) * (maxFontSize - minFontSize);
+            const fontSize = minFontSize + (textBox.size / 100) * (maxFontSize - minFontSize);
             
-            if (currentShape === 'rectangle') {
-                previewText.style.fontSize = `${fontSize}vw`;
+            if (textBox.shape === 'rectangle') {
+                element.style.fontSize = `${fontSize}vw`;
             } else {
-                const chars = Array.from(previewText.children);
+                const chars = Array.from(element.children);
                 chars.forEach(char => {
                     char.style.fontSize = `${fontSize}vw`;
                 });
             }
         }
 
-        function repositionText(centerX, centerY) {
-            previewText.style.left = `${centerX}%`;
-            previewText.style.top = `${centerY}%`;
-            
-            // Update the textPosition object
-            textPosition.left = centerX;
-            textPosition.top = centerY;
-        }
-
-        function checkOverlap(chars) {
-            const containerRect = previewText.getBoundingClientRect();
-            return chars.some(char => {
-                const rect = char.getBoundingClientRect();
-                return rect.left < containerRect.left || rect.top < containerRect.top || 
-                    rect.right > containerRect.right || rect.bottom > containerRect.bottom;
-            });
-        }
-
-        // function adjustTextPosition() {
-        //     const previewRect = preview.getBoundingClientRect();
-        //     const textRect = previewText.getBoundingClientRect();
-            
-        //     // Adjust position if text is outside the preview area
-        //     if (textRect.left < previewRect.left) {
-        //         textPosition.left = 0;
-        //     } else if (textRect.right > previewRect.right) {
-        //         textPosition.left = previewRect.width - textRect.width;
-        //     }
-            
-        //     if (textRect.top < previewRect.top) {
-        //         textPosition.top = 0;
-        //     } else if (textRect.bottom > previewRect.bottom) {
-        //         textPosition.top = previewRect.height - textRect.height;
-        //     }
-            
-        //     previewText.style.left = `${textPosition.left}px`;
-        //     previewText.style.top = `${textPosition.top}px`;
-        // }
-
-        function centerText() {
-            textPosition.left = 50;
-            textPosition.top = 50;
-            updatePreviewText();
-        }
-
         function createCircleText(text) {
             const chars = text.split('');
             const charCount = chars.length;
-            
-            // Base radius as a percentage of half the preview size
             const baseRadius = 45;
-            
-            // Adjust radius based on character count
-            // This formula is an example and may need fine-tuning
             const radius = baseRadius + (charCount * 2);
-            
-            // Ensure the radius doesn't exceed the preview bounds
-            // const maxRadius = 49; // Just shy of 50 to keep within bounds
-            // const radius = Math.min(adjustedRadius, maxRadius);
 
             return chars.map((char, i) => {
                 const angle = (i / charCount) * 2 * Math.PI - Math.PI / 2;
@@ -398,201 +427,161 @@
             }).join('');
         }
 
-        // function createSpiralText(text) {
-        //     const chars = text.split('');
-        //     const baseRadius = 5; // Starting radius
-        //     const radiusIncrement = 0.5; // How much the radius increases per character
-        //     const angleIncrement = 0.5; // Angle between characters (in radians)
-        //     const centerX = 50; // Center X coordinate (in percentage)
-        //     const centerY = 50; // Center Y coordinate (in percentage)
-
-        //     return chars.map((char, i) => {
-        //         const angle = i * angleIncrement;
-        //         const radius = baseRadius + i * radiusIncrement;
-                
-        //         const x = centerX + radius * Math.cos(angle);
-        //         const y = centerY + radius * Math.sin(angle);
-
-        //         // Calculate font size (larger at the center, smaller as it spirals out)
-        //         const fontSize = Math.max(0.5, 3 - (i * 0.05)); // Adjust these values as needed
-
-        //         return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad); font-size: ${fontSize}em;">${char}</span>`;
-        //     }).join('');
-        // }
-
         function createSpiral1Text(text) {
-            const chars = text.split('');
-            const charCount = chars.length;
-            const maxRadius = 45; // Percentage of half the preview size
-            const baseAngle = .5; // Base angle increment
-            const maxSpaces = 10; // Maximum number of spaces at the start
-            const minSpaces = 1; // Minimum number of spaces at the end
+        const chars = text.split('');
+        const charCount = chars.length;
+        const maxRadius = 45;
+        const baseAngle = .5;
+        const maxSpaces = 10;
+        const minSpaces = 1;
 
-            return chars.map((char, i) => {
-                // Calculate decreasing angle increment
-                const angleDecayFactor = 1 - (i / charCount) * 0.05; // Adjust 0.5 to control decay rate
-                const angle = i * baseAngle * angleDecayFactor;
+        return chars.map((char, i) => {
+            const angleDecayFactor = 1 - (i / charCount) * 0.05;
+            const angle = i * baseAngle * angleDecayFactor;
+            const radiusFactor = 1 + charCount/10;
+            const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
+            const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
+            const spaces = ' '.repeat(Math.max(minSpaces, Math.floor(spaceCount)));
+            const x = 50 + radius * Math.cos(angle);
+            const y = 50 + radius * Math.sin(angle);
+            return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
+        }).join('');
+    }
 
-                // Calculate radius with a slight increase for longer texts
-                // const radiusFactor = 1 + (charCount / 25); // Adjust divisor to control expansion
-                const radiusFactor = 1 + charCount/10;
-                const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
+    function createSpiral2Text(text) {
+        const chars = text.split('');
+        const charCount = chars.length;
+        const maxRadius = 45;
+        const baseAngle = .5;
+        const maxSpaces = 10;
+        const minSpaces = 1;
 
-                // Calculate decreasing space
-                const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
-                const spaces = ' '.repeat(Math.max(minSpaces, spaceCount));
+        return chars.map((char, i) => {
+            const angleDecayFactor = 1 - (i / charCount) * 0.05;
+            const angle = i * baseAngle * angleDecayFactor;
+            const radiusFactor = 1 + (charCount / 100);
+            const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
+            const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
+            const spaces = ' '.repeat(Math.max(minSpaces, Math.floor(spaceCount)));
+            const x = 50 + radius * Math.cos(angle);
+            const y = 50 + radius * Math.sin(angle);
+            return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
+        }).join('');
+    }
 
-                const x = 50 + radius * Math.cos(angle);
-                const y = 50 + radius * Math.sin(angle);
-
-                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
-            }).join('');
-        }
-
-        function createSpiral2Text(text) {
-            const chars = text.split('');
-            const charCount = chars.length;
-            const maxRadius = 45; // Percentage of half the preview size
-            const baseAngle = .5; // Base angle increment
-            const maxSpaces = 10; // Maximum number of spaces at the start
-            const minSpaces = 1; // Minimum number of spaces at the end
-
-            return chars.map((char, i) => {
-                // Calculate decreasing angle increment
-                const angleDecayFactor = 1 - (i / charCount) * 0.05; // Adjust 0.5 to control decay rate
-                const angle = i * baseAngle * angleDecayFactor;
-
-                // Calculate radius with a slight increase for longer texts
-                const radiusFactor = 1 + (charCount / 100); // Adjust divisor to control expansion
-                const radius = Math.min(maxRadius * radiusFactor, (i / charCount) * maxRadius * radiusFactor);
-
-                // Calculate decreasing space
-                const spaceCount = maxSpaces - (i / charCount) * (maxSpaces - minSpaces);
-                const spaces = ' '.repeat(Math.max(minSpaces, spaceCount));
-
-                const x = 50 + radius * Math.cos(angle);
-                const y = 50 + radius * Math.sin(angle);
-
-                return `<span style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%) rotate(${angle + Math.PI/2}rad)">${char}${spaces}</span>`;
-            }).join('');
-        }
-
-        sizeSlider.addEventListener('input', function() {
-            currentFontSize = parseInt(this.value);
-            updatePreviewText();
-        });
-
-        function preloadImages() {
-            backgroundOptions.forEach(option => {
-                const imageUrl = option.getAttribute('data-image');
-                const img = new Image();
-                img.src = imageUrl;
-                imageCache.set(imageUrl, img);
-                
-                option.style.backgroundImage = `url('${imageUrl}')`;
-            });
-        }
-
-        function setBackgroundImage(imageUrl) {
-            currentBackgroundImage = `url('${imageUrl}')`;
-            preview.style.backgroundImage = currentBackgroundImage;
-            adjustTextColor(); // This will update the text color and call updatePreviewText
-        }
-
-        function adjustTextColor() {
-            const computedStyle = window.getComputedStyle(preview);
-            const bgImage = computedStyle.backgroundImage;
-            
-            if (bgImage && bgImage !== 'none') {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0, img.width, img.height);
-                    
-                    const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
-                    const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
-                    
-                    currentFontColor = brightness > 128 ? 'black' : 'white';
-                    updatePreviewText(); // Update text with new color
-                };
-                img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
-            } else {
-                currentFontColor = 'black';
-                updatePreviewText(); // Update text with new color
-            }
-        }
-
-        previewText.addEventListener('mousedown', startDragging);
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('mouseup', stopDragging);
-
-        let isDragging = false;
-        let dragStartX, dragStartY;
-        let textStartLeft, textStartTop;
-
-        function initDragFunctionality() {
-            const previewContainer = document.getElementById('preview');
-            
-            previewContainer.addEventListener('mousedown', startDragging);
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', stopDragging);
-            
-            // Remove the event listener from previewText if it exists
-            previewText.removeEventListener('mousedown', startDragging);
-        }
-
-        function startDragging(e) {
-            isDragging = true;
-            const rect = preview.getBoundingClientRect();
-            dragStartX = e.clientX - rect.left;
-            dragStartY = e.clientY - rect.top;
-            textStartLeft = textPosition.left;
-            textStartTop = textPosition.top;
-            
-            // Change cursor style
-            preview.style.cursor = 'grabbing';
-        }
+    function startDragging(e, textBox) {
+        const previewElement = document.getElementById(`preview-${textBox.id}`);
+        const rect = preview.getBoundingClientRect();
+        const startX = e.clientX - rect.left;
+        const startY = e.clientY - rect.top;
+        const startLeft = textBox.position.left;
+        const startTop = textBox.position.top;
 
         function drag(e) {
-            if (!isDragging) return;
-            
-            const rect = preview.getBoundingClientRect();
-            let newX = e.clientX - rect.left;
-            let newY = e.clientY - rect.top;
-            
-            // Calculate the change in position
-            let deltaX = newX - dragStartX;
-            let deltaY = newY - dragStartY;
-            
-            // Update text position based on the change
-            textPosition.left = textStartLeft + (deltaX / rect.width) * 100;
-            textPosition.top = textStartTop + (deltaY / rect.height) * 100;
-            
-            // Clamp values between 0 and 100
-            textPosition.left = Math.max(0, Math.min(100, textPosition.left));
-            textPosition.top = Math.max(0, Math.min(100, textPosition.top));
-            
-            updatePreviewText();
+            const newX = e.clientX - rect.left;
+            const newY = e.clientY - rect.top;
+            const deltaX = newX - startX;
+            const deltaY = newY - startY;
+
+            textBox.position.left = Math.max(0, Math.min(100, startLeft + (deltaX / rect.width) * 100));
+            textBox.position.top = Math.max(0, Math.min(100, startTop + (deltaY / rect.height) * 100));
+
+            updateTextBox(textBox);
         }
 
         function stopDragging() {
-            isDragging = false;
-            // Reset cursor style
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDragging);
             preview.style.cursor = 'default';
         }
 
-        textInput.addEventListener('input', updatePreviewText);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDragging);
+        preview.style.cursor = 'grabbing';
+    }
 
-        const shapeSelect = document.getElementById('shapeSelect');
+    function updateAllTextBoxes() {
+        textBoxes.forEach(updateTextBox);
+    }
 
-        // Replace the existing shape button event listeners with this:
-        shapeSelect.addEventListener('change', function() {
-            currentShape = this.value;
-            updatePreviewText();
+    function preloadImages() {
+        backgroundOptions.forEach(option => {
+            const imageUrl = option.getAttribute('data-image');
+            const img = new Image();
+            img.src = imageUrl;
+            imageCache.set(imageUrl, img);
+            option.style.backgroundImage = `url('${imageUrl}')`;
         });
+    }
+
+    function setBackgroundImage(imageUrl) {
+        currentBackgroundImage = `url('${imageUrl}')`;
+        preview.style.backgroundImage = currentBackgroundImage;
+        adjustTextColors();
+    }
+
+    function adjustTextColors() {
+        const computedStyle = window.getComputedStyle(preview);
+        const bgImage = computedStyle.backgroundImage;
+        
+        if (bgImage && bgImage !== 'none') {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+                
+                const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
+                const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
+                
+                const newColor = brightness > 128 ? 'black' : 'white';
+                textBoxes.forEach(textBox => {
+                    textBox.color = newColor;
+                    updateTextBox(textBox);
+                });
+            };
+            img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
+        } else {
+            textBoxes.forEach(textBox => {
+                textBox.color = 'black';
+                updateTextBox(textBox);
+            });
+        }
+    }
+
+    function showRemoveLightbox(textBox) {
+            textBoxToRemove = textBox;
+            removeLightbox.style.display = 'block';
+        }
+
+        function hideRemoveLightbox() {
+            removeLightbox.style.display = 'none';
+            textBoxToRemove = null;
+        }
+
+        function removeTextBox(textBox) {
+            const index = textBoxes.findIndex(tb => tb.id === textBox.id);
+            if (index !== -1) {
+                textBoxes.splice(index, 1);
+                const settingsElement = document.getElementById(`settings-${textBox.id}`);
+                const previewElement = document.getElementById(`preview-${textBox.id}`);
+                settingsElement.remove();
+                previewElement.remove();
+            }
+        }
+
+        addTextBoxButton.addEventListener('click', createTextBox);
+
+        removeLightbox.querySelector('.confirm-remove').addEventListener('click', () => {
+            if (textBoxToRemove) {
+                removeTextBox(textBoxToRemove);
+                hideRemoveLightbox();
+            }
+        });
+
+        removeLightbox.querySelector('.cancel-remove').addEventListener('click', hideRemoveLightbox);
 
         backgroundOptions.forEach(option => {
             option.addEventListener('click', function() {
@@ -603,15 +592,13 @@
             });
         });
 
-        // Call this function after the DOM is loaded
         window.addEventListener('DOMContentLoaded', function() {
             loadCustomFont();
             preloadImages();
-            updatePreviewText();
-            initDragFunctionality(); // Initialize the new drag functionality
+            createTextBox(); // Create an initial text box
         });
 
-        window.addEventListener('resize', updatePreviewText);
-    </script>
+        window.addEventListener('resize', updateAllTextBoxes);
+</script>
 </body>
 </html>
