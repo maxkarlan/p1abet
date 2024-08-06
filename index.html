@@ -375,7 +375,8 @@
                 size: 50,
                 rotation: 0,
                 position: { left: 50, top: 50 },
-                color: 'black'
+                color: currentTextColor,
+                visible: true  // Add visibility property
             };
             textBoxes.push(textBox);
             createTextBoxUI(textBox);
@@ -507,6 +508,11 @@
             // Add event listener for visibility toggle
             const visibilityToggle = container.querySelector('.visibility-toggle');
             visibilityToggle.addEventListener('click', () => toggleTextBoxVisibility(textBox));
+            
+            // Set initial visibility state
+            const visibilityImg = visibilityToggle.querySelector('img');
+            visibilityImg.src = textBox.visible ? 'images/visible.png' : 'images/invisible.png';
+            visibilityImg.alt = textBox.visible ? 'Visible' : 'Invisible';
 
             updateFormatOptions(textBox);
         }
@@ -514,8 +520,14 @@
         function toggleTextBoxVisibility(textBox) {
             const previewElement = document.getElementById(`preview-${textBox.id}`);
             const visibilityToggle = document.querySelector(`.visibility-toggle[data-id="${textBox.id}"] img`);
+            if (visibilityToggle) {
+                visibilityToggle.src = textBox.visible ? 'images/visible.png' : 'images/invisible.png';
+                visibilityToggle.alt = textBox.visible ? 'Visible' : 'Invisible';
+            }
             
-            if (previewElement.style.display === 'none') {
+            textBox.visible = !textBox.visible;  // Toggle the visibility state
+            
+            if (textBox.visible) {
                 previewElement.style.display = '';
                 visibilityToggle.src = 'images/visible.png';
                 visibilityToggle.alt = 'Visible';
@@ -614,6 +626,7 @@
             previewElement.style.left = `${textBox.position.left}%`;
             previewElement.style.top = `${textBox.position.top}%`;
             previewElement.style.color = textBox.color;
+            previewElement.style.display = textBox.visible ? '' : 'none';  // Set display based on visibility
             previewElement.style.transform = `translate(-50%, -50%) rotate(${textBox.rotation}deg)`;
 
             switch(textBox.shape) {
@@ -968,6 +981,9 @@
             });
         }
 
+        // Add a global variable to track the current text color
+        let currentTextColor = 'black';
+
         function setBackgroundImage(imageUrl) {
             currentBackgroundImage = `url('${imageUrl}')`;
             preview.style.backgroundImage = currentBackgroundImage;
@@ -975,37 +991,42 @@
         }
 
         function adjustTextColors() {
+            getAppropriateTextColor().then(newColor => {
+                currentTextColor = newColor;  // Update the global text color
+                textBoxes.forEach(textBox => {
+                    textBox.color = newColor;
+                    updateTextBox(textBox);
+                    // Maintain visibility state
+                    const previewElement = document.getElementById(`preview-${textBox.id}`);
+                    previewElement.style.display = textBox.visible ? '' : 'none';
+                });
+                applyTexture(newColor);
+            });
+        }
+
+        function getAppropriateTextColor() {
             const computedStyle = window.getComputedStyle(preview);
             const bgImage = computedStyle.backgroundImage;
             
             if (bgImage && bgImage !== 'none') {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0, img.width, img.height);
-                    
-                    const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
-                    const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
-                    
-                    const newColor = brightness > 128 ? 'black' : 'white';
-                    textBoxes.forEach(textBox => {
-                        textBox.color = newColor;
-                        updateTextBox(textBox);
-                    });
-
-                    // Apply texture based on text color
-                    applyTexture(newColor);
-                };
-                img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
-            } else {
-                textBoxes.forEach(textBox => {
-                    textBox.color = 'black';
-                    updateTextBox(textBox);
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0, img.width, img.height);
+                        
+                        const imageData = ctx.getImageData(img.width / 2, img.height / 2, 1, 1).data;
+                        const brightness = (imageData[0] * 299 + imageData[1] * 587 + imageData[2] * 114) / 1000;
+                        
+                        resolve(brightness > 128 ? 'black' : 'white');
+                    };
+                    img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
                 });
-                applyTexture('black');
+            } else {
+                return Promise.resolve('black'); // Default color if no background image
             }
         }
 
@@ -1044,7 +1065,9 @@
             }
         }
 
-        addTextBoxButton.addEventListener('click', createTextBox);
+        addTextBoxButton.addEventListener('click', () => {
+            createTextBox();  // No need for async here anymore
+        });
 
         removeLightbox.querySelector('.confirm-remove').addEventListener('click', () => {
             if (textBoxToRemove) {
@@ -1064,9 +1087,11 @@
             });
         });
 
+        // Initialize the text color when the page loads
         window.addEventListener('DOMContentLoaded', function() {
             loadCustomFont();
             preloadImages();
+            adjustTextColors();  // This will set the initial currentTextColor
             createTextBox(); // Create an initial text box
         });
 
