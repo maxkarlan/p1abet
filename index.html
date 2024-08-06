@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Font Preview with Multiple Text Boxes</title>
+    <title>P1abet</title>
     <style>
         @font-face {
             font-family: 'CustomFont';
@@ -298,7 +298,7 @@
         </div>
     
         <div class="preview-column">
-            <h2 class="card-title">Custom Font Preview</h2>
+            <h2 class="card-title">P1abet Preview</h2>
             <div class="preview-wrapper">
                 <div id="preview" class="preview">
                     <div id="texture-overlay" class="texture-overlay"></div>
@@ -355,7 +355,7 @@
             font.load().then(function(loadedFont) {
                 document.fonts.add(loadedFont);
                 preview.style.fontFamily = 'CustomFont, sans-serif';
-                fontStatus.textContent = 'Custom font loaded successfully!';
+                // fontStatus.textContent = 'Custom font loaded successfully!';
                 updateAllTextBoxes();
             }).catch(function(error) {
                 console.error('Error loading font:', error);
@@ -386,7 +386,7 @@
 
         function formatCoordinate(value) {
             // Convert to string and trim trailing zeros
-            return parseFloat(value.toFixed(6)).toString();
+            return parseFloat(value.toFixed(2)).toString();
         }
 
         function createTextBoxUI(textBox) {
@@ -431,7 +431,7 @@
                     </div>
                     <div class="slider-container">
                         <div class="slider-wrapper">
-                            <input type="range" id="sizeSlider-${textBox.id}" class="size-slider" min="5" max="100" value="50">
+                            <input type="range" id="sizeSlider-${textBox.id}" class="size-slider" min="5" max="100" value="25">
                         </div>
                         <div class="slider-value" id="sizeValue-${textBox.id}">50</div>
                     </div>
