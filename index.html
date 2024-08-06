@@ -59,11 +59,25 @@
             background-size: cover;
             background-position: center;
         }
+        .texture-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-size: cover;
+            background-position: center;
+            mix-blend-mode: multiply;
+            pointer-events: none;
+            opacity: .25; /* Adjust this value to control the intensity of the texture */
+            z-index: 10; /* Ensure the overlay is above the text */
+        }
         .preview-text {
             position: absolute;
             cursor: move;
             user-select: none;
             transform-origin: center center;
+            z-index: 5; /* Ensure text is below the texture overlay */
         }
         .preview-text-container {
             position: absolute;
@@ -259,6 +273,18 @@
         .cancel-remove {
             background-color: #ddd;
         }
+        .coordinate-input input {
+            width: 35%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            -moz-appearance: textfield; /* Remove spinner for Firefox */
+        }
+        .coordinate-input input::-webkit-outer-spin-button,
+        .coordinate-input input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0; /* Remove spinner for Chrome, Safari, Edge, Opera */
+        }
     </style>
 </head>
 <body>
@@ -274,7 +300,9 @@
         <div class="preview-column">
             <h2 class="card-title">Custom Font Preview</h2>
             <div class="preview-wrapper">
-                <div id="preview" class="preview"></div>
+                <div id="preview" class="preview">
+                    <div id="texture-overlay" class="texture-overlay"></div>
+                </div>
             </div>
             <div id="fontStatus"></div>
         </div>
@@ -309,7 +337,7 @@
     </div>
 
     <script>
-         let currentBackgroundImage = '';
+        let currentBackgroundImage = '';
         const imageCache = new Map();
         let textBoxes = [];
 
@@ -355,6 +383,11 @@
             updateTextBox(textBox);
         }
 
+        function formatCoordinate(value) {
+            // Convert to string and trim trailing zeros
+            return parseFloat(value.toFixed(6)).toString();
+        }
+
         function createTextBoxUI(textBox) {
             const container = document.createElement('div');
             container.className = 'text-box-settings';
@@ -383,6 +416,16 @@
                             <select id="formatOptions-${textBox.id}">
                                 <option value="default">Default</option>
                             </select>
+                        </div>
+                    </div>
+                    <div class="coordinate-inputs">
+                        <div class="coordinate-input">
+                            <label for="xCoordinate-${textBox.id}">X:</label>
+                            <input type="text" id="xCoordinate-${textBox.id}" value="${formatCoordinate(textBox.position.left)}">
+                        </div>
+                        <div class="coordinate-input">
+                            <label for="yCoordinate-${textBox.id}">Y:</label>
+                            <input type="text" id="yCoordinate-${textBox.id}" value="${formatCoordinate(textBox.position.top)}">
                         </div>
                     </div>
                     <div class="slider-container">
@@ -419,6 +462,42 @@
             document.getElementById(`rotationDial-${textBox.id}`).addEventListener('input', (e) => {
                 document.getElementById(`rotationValue-${textBox.id}`).textContent = `${e.target.value}°`;
                 updateTextBox(textBox);
+            });
+            // Update event listeners for coordinate inputs
+            const xInput = document.getElementById(`xCoordinate-${textBox.id}`);
+            const yInput = document.getElementById(`yCoordinate-${textBox.id}`);
+
+            function updateCoordinate(input, isX) {
+                let value = parseFloat(input.value);
+                if (!isNaN(value)) {
+                    value = Math.max(0, Math.min(100, value));
+                    if (isX) {
+                        textBox.position.left = value;
+                    } else {
+                        textBox.position.top = value;
+                    }
+                    updateTextBox(textBox);
+                } else {
+                    // Revert to the last valid value if input is not a number
+                    input.value = formatCoordinate(isX ? textBox.position.left : textBox.position.top);
+                }
+            }
+
+            xInput.addEventListener('blur', () => updateCoordinate(xInput, true));
+            yInput.addEventListener('blur', () => updateCoordinate(yInput, false));
+
+            xInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    updateCoordinate(xInput, true);
+                    xInput.blur();
+                }
+            });
+
+            yInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    updateCoordinate(yInput, false);
+                    yInput.blur();
+                }
             });
             
             // Add event listener for remove button
@@ -517,6 +596,17 @@
             textBox.size = parseInt(sizeSlider.value);
             textBox.rotation = parseInt(rotationDial.value);
 
+            // Update coordinate inputs only if they don't have focus
+            const xInput = document.getElementById(`xCoordinate-${textBox.id}`);
+            const yInput = document.getElementById(`yCoordinate-${textBox.id}`);
+            
+            if (document.activeElement !== xInput) {
+                xInput.value = formatCoordinate(textBox.position.left);
+            }
+            if (document.activeElement !== yInput) {
+                yInput.value = formatCoordinate(textBox.position.top);
+            }
+
             // Update the numeric displays
             document.getElementById(`sizeValue-${textBox.id}`).textContent = textBox.size;
             document.getElementById(`rotationValue-${textBox.id}`).textContent = `${textBox.rotation}°`;
@@ -567,6 +657,10 @@
             }
 
             adjustFontSize(previewElement, textBox);
+
+            // Ensure the texture overlay is on top of all text boxes
+            const textureOverlay = document.getElementById('texture-overlay');
+            preview.appendChild(textureOverlay);
         }
 
         function setShapeSize(element, size) {
@@ -901,6 +995,9 @@
                         textBox.color = newColor;
                         updateTextBox(textBox);
                     });
+
+                    // Apply texture based on text color
+                    applyTexture(newColor);
                 };
                 img.src = bgImage.replace(/url\(['"]?|['"]?\)/g, '');
             } else {
@@ -908,7 +1005,22 @@
                     textBox.color = 'black';
                     updateTextBox(textBox);
                 });
+                applyTexture('black');
             }
+        }
+
+        function applyTexture(textColor) {
+            const textureOverlay = document.getElementById('texture-overlay');
+            if (textColor === 'black') {
+                textureOverlay.style.backgroundImage = 'url("images/texture1.png")';
+                textureOverlay.style.mixBlendMode = 'multiply';
+            } else {
+                textureOverlay.style.backgroundImage = 'url("images/texture2.png")';
+                textureOverlay.style.mixBlendMode = 'screen';
+            }
+            // Ensure the texture overlay is the last child of the preview
+            const preview = document.getElementById('preview');
+            preview.appendChild(textureOverlay);
         }
 
         function showRemoveLightbox(textBox) {
