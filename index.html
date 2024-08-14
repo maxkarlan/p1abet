@@ -69,7 +69,7 @@
             background-position: center;
             mix-blend-mode: multiply;
             pointer-events: none;
-            opacity: .25; /* Adjust this value to control the intensity of the texture */
+            opacity: .1; /* Adjust this value to control the intensity of the texture */
             z-index: 10; /* Ensure the overlay is above the text */
         }
         .preview-text {
@@ -285,6 +285,20 @@
             -webkit-appearance: none;
             margin: 0; /* Remove spinner for Chrome, Safari, Edge, Opera */
         }
+        .download-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .download-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -305,6 +319,7 @@
                 </div>
             </div>
             <div id="fontStatus"></div>
+            <button id="downloadImage" class="download-button">Download Image</button>
         </div>
     
         <div class="settings-column">
@@ -322,6 +337,9 @@
                 <div class="background-option" style="background-image: url('images/bg9.png');" data-image="images/bg9.png"></div>
                 <div class="background-option" style="background-image: url('images/bg10.png');" data-image="images/bg10.png"></div>
                 <div class="background-option" style="background-image: url('images/bg11.png');" data-image="images/bg11.png"></div>
+                <div class="background-option" style="background-image: url('images/bg12.png');" data-image="images/bg12.png"></div>
+                <div class="background-option" style="background-image: url('images/bg13.png');" data-image="images/bg13.png"></div>
+                <div class="background-option" style="background-image: url('images/bg14.png');" data-image="images/bg14.png"></div>
             </div>
         </div>
     </div>
@@ -1065,6 +1083,29 @@
             }
         }
 
+        function downloadImage() {
+            const preview = document.getElementById('preview');
+            
+            // Use html2canvas to capture the preview content
+            html2canvas(preview).then(canvas => {
+                // Convert the canvas to a data URL
+                const dataURL = canvas.toDataURL('image/png');
+                
+                // Create a temporary link element
+                const downloadLink = document.createElement('a');
+                downloadLink.href = dataURL;
+                downloadLink.download = 'p1abet_preview.png';
+                
+                // Append the link to the body, click it, and remove it
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            });
+        }
+
+        // Add event listener for the download button
+        document.getElementById('downloadImage').addEventListener('click', downloadImage);
+
         addTextBoxButton.addEventListener('click', () => {
             createTextBox();  // No need for async here anymore
         });
@@ -1096,6 +1137,7 @@
         });
 
         window.addEventListener('resize', updateAllTextBoxes);
-</script>
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </body>
 </html>
